@@ -1,0 +1,105 @@
+{
+  "projectType": "saas",
+  "projectName": "oForum",
+  "projectDescription": "Minimal, fast, self-hostable forum inspired by Hacker News with one binary and one database.",
+  "theme": "linden",
+  "primaryColor": "#ff6600",
+  "lightColor": "#ff8533",
+  "darkColor": "#cc5200",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Self-Hosting",
+            "pages": [
+              "self-hosting/overview",
+              "self-hosting/docker",
+              "self-hosting/fly-io",
+              "self-hosting/manual",
+              "self-hosting/environment"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "user-guide/posts",
+              "user-guide/comments",
+              "user-guide/profiles",
+              "user-guide/search",
+              "user-guide/leaderboard"
+            ]
+          },
+          {
+            "group": "Administration",
+            "pages": [
+              "admin/overview",
+              "admin/user-management",
+              "admin/roles",
+              "admin/tags",
+              "admin/settings"
+            ]
+          },
+          {
+            "group": "CLI Reference",
+            "pages": [
+              "cli/overview",
+              "cli/serve",
+              "cli/init",
+              "cli/migrate",
+              "cli/seed",
+              "cli/version",
+              "cli/update"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/overview",
+              "development/setup",
+              "development/architecture",
+              "development/database",
+              "development/templates",
+              "development/authentication"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Single binary deployment with embedded migrations",
+    "Server-rendered HTML with no JavaScript frameworks",
+    "Posts, comments, threaded replies, and upvoting",
+    "User profiles with karma and reputation tracking",
+    "Admin panel with user management, roles, and tags",
+    "Full-text search and leaderboard",
+    "Dark mode support",
+    "SEO-optimized with sitemap and robots.txt"
+  ],
+  "publicApiSurface": [
+    "oforum serve - Start the forum server",
+    "oforum init - Generate .env configuration interactively",
+    "oforum migrate - Run database migrations",
+    "oforum seed - Seed database with demo data",
+    "oforum version - Print version information",
+    "oforum update - Update to latest release",
+    "oforum help - Display help information",
+    "DATABASE_URL - PostgreSQL connection string (required)",
+    "PORT - Server port (default: 8080)"
+  ]
+}
