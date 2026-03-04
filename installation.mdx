@@ -1,0 +1,458 @@
+---
+title: Installation
+description: Complete installation guide for oForum across different platforms and installation methods
+---
+
+## Installation methods
+
+oForum can be installed in three ways:
+
+1. **Install script** (recommended) - Quick installation via curl
+2. **Pre-built binaries** - Download and install manually
+3. **From source** - Build from the Go source code
+
+Choose the method that best fits your workflow.
+
+## System requirements
+
+Before installing, ensure you have:
+
+<CardGroup cols={2}>
+  <Card title="PostgreSQL" icon="database">
+    Any recent version (12+)
+  </Card>
+  <Card title="Go 1.25+" icon="golang">
+    Only required if building from source
+  </Card>
+  <Card title="Linux or macOS" icon="desktop">
+    amd64 or arm64 architecture
+  </Card>
+  <Card title="Disk space" icon="hard-drive">
+    ~10MB for the binary
+  </Card>
+</CardGroup>
+
+<Warning>
+  Windows is not currently supported. Use WSL2 (Windows Subsystem for Linux) if you're on Windows.
+</Warning>
+
+## Method 1: Install script
+
+The fastest way to install oForum is using the official install script:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/arcten/oforum/main/install.sh | sudo sh
+```
+
+### How it works
+
+The script automatically:
+1. Detects your operating system (macOS/Linux)
+2. Detects your CPU architecture (amd64/arm64)
+3. Downloads the latest release from GitHub
+4. Installs the binary to `/usr/local/bin/oforum`
+5. Installs the man page to `/usr/local/share/man/man1`
+6. Makes the binary executable and available system-wide
+
+<Accordion title="Script output example">
+  ```
+  Detected: darwin/arm64
+  Latest:   v0.0.2
+  Downloading oforum-0.0.2-darwin-arm64...
+  ✓ man page installed (man oforum)
+  ✓ oforum v0.0.2 installed to /usr/local/bin/oforum
+  Run 'oforum' to start
+  ```
+</Accordion>
+
+### Custom install directory
+
+If you don't have sudo access or want to install to a different location:
+
+```bash
+INSTALL_DIR=~/.local/bin curl -fsSL https://raw.githubusercontent.com/arcten/oforum/main/install.sh | sh
+```
+
+Make sure `~/.local/bin` is in your `PATH`:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Add this to your `~/.bashrc`, `~/.zshrc`, or equivalent to make it permanent.
+
+### Verify installation
+
+Check that oForum is installed correctly:
+
+```bash
+oforum version
+```
+
+Expected output:
+```
+oforum v0.0.2
+Run 'oforum update' to check for updates
+```
+
+## Method 2: Pre-built binaries
+
+Download pre-built binaries manually from the [releases page](https://github.com/arcten/oforum/releases).
+
+### Available platforms
+
+- **macOS** (Intel and Apple Silicon)
+  - `oforum-{version}-darwin-amd64`
+  - `oforum-{version}-darwin-arm64`
+- **Linux** (x86-64 and ARM64)
+  - `oforum-{version}-linux-amd64`
+  - `oforum-{version}-linux-arm64`
+
+### Installation steps
+
+<Steps>
+  <Step title="Download the binary">
+    Download the appropriate binary for your platform:
+
+    <CodeGroup>
+    ```bash macOS (Apple Silicon)
+    curl -L -o oforum https://github.com/arcten/oforum/releases/download/v0.0.2/oforum-0.0.2-darwin-arm64
+    ```
+
+    ```bash macOS (Intel)
+    curl -L -o oforum https://github.com/arcten/oforum/releases/download/v0.0.2/oforum-0.0.2-darwin-amd64
+    ```
+
+    ```bash Linux (x86-64)
+    curl -L -o oforum https://github.com/arcten/oforum/releases/download/v0.0.2/oforum-0.0.2-linux-amd64
+    ```
+
+    ```bash Linux (ARM64)
+    curl -L -o oforum https://github.com/arcten/oforum/releases/download/v0.0.2/oforum-0.0.2-linux-arm64
+    ```
+    </CodeGroup>
+
+    <Tip>
+      Replace `v0.0.2` with the latest version from the [releases page](https://github.com/arcten/oforum/releases).
+    </Tip>
+  </Step>
+
+  <Step title="Make it executable">
+    ```bash
+    chmod +x oforum
+    ```
+  </Step>
+
+  <Step title="Move to PATH">
+    Move the binary to a directory in your PATH:
+
+    ```bash
+    sudo mv oforum /usr/local/bin/
+    ```
+
+    Or without sudo:
+
+    ```bash
+    mkdir -p ~/.local/bin
+    mv oforum ~/.local/bin/
+    export PATH="$HOME/.local/bin:$PATH"
+    ```
+  </Step>
+
+  <Step title="Verify">
+    ```bash
+    oforum version
+    ```
+  </Step>
+</Steps>
+
+## Method 3: Build from source
+
+If you want to modify oForum or build the latest development version, you can compile it from source.
+
+### Prerequisites
+
+- **Go 1.25 or later**
+- **Git**
+- **PostgreSQL** (for running/testing)
+
+### Build steps
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/arcten/oforum.git
+    cd oforum
+    ```
+  </Step>
+
+  <Step title="Build the binary">
+    ```bash
+    go build -o oforum .
+    ```
+
+    Or use the provided Makefile:
+
+    ```bash
+    make build
+    ```
+
+    The binary will be created in the current directory as `oforum`.
+  </Step>
+
+  <Step title="Install system-wide (optional)">
+    ```bash
+    sudo mv oforum /usr/local/bin/
+    ```
+
+    Or to your local bin:
+
+    ```bash
+    mkdir -p ~/.local/bin
+    mv oforum ~/.local/bin/
+    ```
+  </Step>
+
+  <Step title="Verify">
+    ```bash
+    oforum version
+    ```
+  </Step>
+</Steps>
+
+### Build for all platforms
+
+To cross-compile for all supported platforms:
+
+```bash
+make release
+```
+
+This creates binaries in the `dist/` directory for:
+- Linux (amd64, arm64)
+- macOS (amd64, arm64)
+
+## Platform-specific instructions
+
+### macOS
+
+<Accordion title="Install PostgreSQL on macOS">
+  Using Homebrew:
+
+  ```bash
+  brew install postgresql@16
+  brew services start postgresql@16
+  ```
+
+  Create the database:
+
+  ```bash
+  createdb oforum
+  ```
+</Accordion>
+
+<Accordion title="Fix 'unidentified developer' warning">
+  If macOS blocks the binary, run:
+
+  ```bash
+  xattr -d com.apple.quarantine /usr/local/bin/oforum
+  ```
+
+  Or allow it in System Preferences → Security & Privacy.
+</Accordion>
+
+### Linux
+
+<Accordion title="Install PostgreSQL on Ubuntu/Debian">
+  ```bash
+  sudo apt update
+  sudo apt install postgresql postgresql-contrib
+  sudo systemctl start postgresql
+  sudo systemctl enable postgresql
+  ```
+
+  Create a user and database:
+
+  ```bash
+  sudo -u postgres createuser -s $USER
+  createdb oforum
+  ```
+</Accordion>
+
+<Accordion title="Install PostgreSQL on Fedora/RHEL">
+  ```bash
+  sudo dnf install postgresql-server postgresql-contrib
+  sudo postgresql-setup --initdb
+  sudo systemctl start postgresql
+  sudo systemctl enable postgresql
+  ```
+
+  Create a user and database:
+
+  ```bash
+  sudo -u postgres createuser -s $USER
+  createdb oforum
+  ```
+</Accordion>
+
+<Accordion title="Install PostgreSQL on Arch Linux">
+  ```bash
+  sudo pacman -S postgresql
+  sudo -u postgres initdb -D /var/lib/postgres/data
+  sudo systemctl start postgresql
+  sudo systemctl enable postgresql
+  ```
+
+  Create a user and database:
+
+  ```bash
+  sudo -u postgres createuser -s $USER
+  createdb oforum
+  ```
+</Accordion>
+
+## Verification steps
+
+After installation, verify everything works:
+
+<Steps>
+  <Step title="Check binary version">
+    ```bash
+    oforum version
+    ```
+  </Step>
+
+  <Step title="Check PostgreSQL connection">
+    ```bash
+    psql -d oforum -c "SELECT version();"
+    ```
+
+    This should print your PostgreSQL version.
+  </Step>
+
+  <Step title="Initialize and test">
+    ```bash
+    oforum init
+    oforum migrate
+    ```
+
+    If migrations succeed, your setup is working correctly.
+  </Step>
+</Steps>
+
+## Updating oForum
+
+Keep oForum up to date with the built-in update command:
+
+```bash
+oforum update
+```
+
+This downloads and installs the latest release automatically.
+
+<Note>
+  The update command requires the same permissions as installation. If you installed with `sudo`, run `sudo oforum update`.
+</Note>
+
+## Troubleshooting
+
+<Accordion title="Command not found: oforum">
+  The binary is not in your `PATH`. Either:
+
+  1. Add the install directory to your PATH:
+     ```bash
+     export PATH="/usr/local/bin:$PATH"
+     ```
+
+  2. Or run with the full path:
+     ```bash
+     /usr/local/bin/oforum version
+     ```
+</Accordion>
+
+<Accordion title="Permission denied when installing">
+  You need write access to `/usr/local/bin`. Either:
+
+  1. Use sudo:
+     ```bash
+     curl -fsSL https://raw.githubusercontent.com/arcten/oforum/main/install.sh | sudo sh
+     ```
+
+  2. Or install to your home directory:
+     ```bash
+     INSTALL_DIR=~/.local/bin curl -fsSL https://raw.githubusercontent.com/arcten/oforum/main/install.sh | sh
+     ```
+</Accordion>
+
+<Accordion title="Cannot connect to PostgreSQL">
+  Make sure PostgreSQL is running:
+
+  <CodeGroup>
+  ```bash macOS
+  brew services list | grep postgresql
+  brew services start postgresql@16
+  ```
+
+  ```bash Linux (systemd)
+  sudo systemctl status postgresql
+  sudo systemctl start postgresql
+  ```
+  </CodeGroup>
+
+  Test the connection:
+  ```bash
+  psql -d oforum -c "SELECT 1;"
+  ```
+</Accordion>
+
+<Accordion title="Build fails with Go version error">
+  Ensure you have Go 1.25 or later:
+
+  ```bash
+  go version
+  ```
+
+  If your version is older, update Go:
+  - [Official Go downloads](https://go.dev/dl/)
+  - Or use your package manager (Homebrew, apt, etc.)
+</Accordion>
+
+<Accordion title="Architecture not supported">
+  oForum supports:
+  - **macOS**: amd64 (Intel), arm64 (Apple Silicon)
+  - **Linux**: amd64 (x86-64), arm64 (aarch64)
+
+  Check your architecture:
+  ```bash
+  uname -m
+  ```
+
+  If you're on an unsupported platform, you can try building from source with:
+  ```bash
+  GOOS=linux GOARCH=arm go build -o oforum .
+  ```
+</Accordion>
+
+<Accordion title="Installation script fails to download">
+  If the GitHub API is blocked or rate-limited:
+
+  1. Download the binary manually from [releases](https://github.com/arcten/oforum/releases)
+  2. Install it using Method 2 (pre-built binaries) above
+</Accordion>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get oForum running with a step-by-step guide
+  </Card>
+  <Card title="Environment variables" icon="gear" href="/self-hosting/environment">
+    Learn about environment variables and settings
+  </Card>
+  <Card title="Self-hosting" icon="cloud" href="/self-hosting/overview">
+    Deploy oForum to production environments
+  </Card>
+  <Card title="Development setup" icon="code" href="/development/setup">
+    Set up a local development environment
+  </Card>
+</CardGroup>

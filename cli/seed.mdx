@@ -1,0 +1,282 @@
+---
+title: seed
+description: Seed the database with demo data
+---
+
+The `seed` command populates your database with sample data for development and testing. This includes users, posts, comments, and upvotes with realistic content.
+
+## Usage
+
+```bash
+oforum seed
+```
+
+<Note>
+  The `seed` command automatically runs migrations before seeding. You don't need to run `oforum migrate` first.
+</Note>
+
+## What Gets Created
+
+The seed command generates:
+
+<CardGroup cols={2}>
+  <Card title="30 Users" icon="users">
+    Demo accounts with usernames like alice, bob, charlie, etc. All use password `password123`.
+  </Card>
+  <Card title="20 Posts" icon="newspaper">
+    Tech-related posts with titles, descriptions, and external URLs covering topics like Go, PostgreSQL, Rust, and web development.
+  </Card>
+  <Card title="200 Comments" icon="comments">
+    Realistic comment threads including nested replies (30% of comments are replies to other comments).
+  </Card>
+  <Card title="300 Upvotes" icon="arrow-up">
+    Distributed across posts (60%) and comments (40%) to simulate community engagement.
+  </Card>
+</CardGroup>
+
+## Output
+
+```bash
+oforum seed
+```
+
+Output:
+```
+⟳ Seeding database...
+
+✓ 30 users created
+✓ admin: alice
+✓ 20 posts created
+✓ 200 comments created
+✓ 300 upvotes created
+
+✓ Seed complete
+
+Default login: alice / password123
+```
+
+## Default Admin Credentials
+
+The first user created (`alice`) is automatically assigned admin privileges:
+
+<ParamField path="Username" type="string">
+  alice
+</ParamField>
+
+<ParamField path="Password" type="string">
+  password123
+</ParamField>
+
+Use these credentials to:
+- Access the admin dashboard at `/admin`
+- Manage users, tags, and roles
+- Configure site settings
+
+<Warning>
+  Never use the default credentials in production. Always create a secure admin account and change the password immediately.
+</Warning>
+
+## Sample Data
+
+### Users
+
+30 users with names:
+```
+alice, bob, charlie, diana, eve, frank, grace, hank,
+iris, jack, kate, leo, mia, noah, olivia, paul,
+quinn, rose, sam, tara, uma, vic, wendy, xander,
+yara, zane, alex, blake, casey, drew
+```
+
+All accounts:
+- Use password `password123`
+- Have random creation dates (up to 90 days in the past)
+- Can post, comment, and upvote immediately
+
+### Posts
+
+20 posts with realistic tech topics:
+- "Go 1.25 Released with Major Performance Improvements"
+- "SQLite is All You Need"
+- "Show: I built a terminal file manager in Rust"
+- "Ask: What's your favorite underrated CLI tool?"
+- "Why I Stopped Using React"
+- And 15 more...
+
+Each post includes:
+- Title and body text
+- External URL (for 70% of posts)
+- Random author from the 30 users
+- Creation timestamp (up to 72 days ago)
+- Unique slug for URL
+
+### Comments
+
+200 comments with varied tones:
+- "Great article, thanks for sharing."
+- "This mirrors my experience exactly."
+- "Worth noting that this doesn't work well on Windows."
+- "Bookmarked. Will try this over the weekend."
+- And more...
+
+30% of comments are replies to other comments, creating threaded discussions.
+
+### Upvotes
+
+300 upvotes distributed across:
+- 60% on posts
+- 40% on comments
+
+Each user can only upvote a post or comment once (enforced by database constraints).
+
+## When to Use Seed Data
+
+### Local Development
+
+Perfect for testing features without manually creating content:
+
+```bash
+oforum seed
+oforum serve
+```
+
+Visit `http://localhost:8080` to see a populated forum.
+
+### Staging Environment
+
+Populate staging with realistic data:
+
+```bash
+export DATABASE_URL="postgres://staging-db/oforum"
+oforum seed
+```
+
+### Demo Instances
+
+Create demo sites for showcasing oForum:
+
+```bash
+oforum seed
+# Share demo URL with test credentials
+```
+
+### Testing
+
+Seed before running integration tests:
+
+```bash
+oforum seed
+npm test
+```
+
+<Warning>
+  Never run `oforum seed` in production. It will add demo data to your live forum.
+</Warning>
+
+## Seed Variants
+
+The oForum repository includes additional seed scripts in the `cmd/` directory for advanced use cases:
+
+### seed-extra
+
+Creates 1,000 posts for load testing:
+
+```bash
+go run cmd/seed-extra/main.go
+```
+
+Generates:
+- 1,000 posts with procedurally generated titles
+- ~2,000 comments (2 per post)
+- ~3,000 upvotes (3 per post)
+- Uses existing users from `oforum seed`
+
+<Note>
+  Run `oforum seed` first to create the initial 30 users.
+</Note>
+
+### seed-prod
+
+Creates 5,000 posts for production-scale testing:
+
+```bash
+go run cmd/seed-prod/main.go
+```
+
+Generates:
+- 50 users
+- 5,000 posts
+- ~10,000 comments
+- ~15,000 upvotes
+- Post tagging (40% of posts)
+
+<Warning>
+  This generates significant data. Only use on test/staging databases with adequate resources.
+</Warning>
+
+## Idempotency
+
+The seed command uses `ON CONFLICT DO UPDATE` for users, making it safe to run multiple times:
+
+```sql
+INSERT INTO users (username, password_hash, created_at) 
+VALUES ($1, $2, $3)
+ON CONFLICT (username) DO UPDATE SET username = EXCLUDED.username
+```
+
+Posts and comments are always inserted as new rows. Running `seed` multiple times will:
+- Keep existing users (updating timestamps)
+- Add duplicate posts with different slugs
+- Add new comments and upvotes
+
+## Resetting Data
+
+To start fresh:
+
+```sql
+-- Delete all data
+TRUNCATE users, posts, comments, upvotes, sessions, tags, roles, post_tags, user_roles CASCADE;
+
+-- Re-run migrations
+DELETE FROM schema_migrations;
+```
+
+Then:
+```bash
+oforum migrate
+oforum seed
+```
+
+## Environment Variables
+
+<ParamField path="DATABASE_URL" type="string" required>
+  PostgreSQL connection string.
+  
+  ```bash
+  DATABASE_URL=postgres://localhost:5432/oforum?sslmode=disable
+  ```
+</ParamField>
+
+## Examples
+
+### First-Time Setup
+
+```bash
+oforum init
+oforum seed
+```
+
+Login at `http://localhost:8080` with `alice` / `password123`.
+
+### Reset and Reseed
+
+```bash
+psql -d oforum -c "TRUNCATE users CASCADE;"
+oforum seed
+```
+
+### Seed Remote Database
+
+```bash
+DATABASE_URL="postgres://user:pass@remote-db/oforum" oforum seed
+```

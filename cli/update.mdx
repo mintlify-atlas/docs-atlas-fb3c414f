@@ -1,0 +1,332 @@
+---
+title: update
+description: Update oForum to the latest release
+---
+
+The `update` command updates your oForum installation to the latest release from GitHub.
+
+## Usage
+
+```bash
+oforum update
+```
+
+<Warning>
+  The update command requires `sudo` privileges if oForum is installed system-wide (e.g., in `/usr/local/bin`).
+</Warning>
+
+## How It Works
+
+The update command:
+
+1. **Downloads install script** - Fetches the latest installer from GitHub
+2. **Checks privileges** - Automatically uses `sudo` if not running as root
+3. **Runs installer** - Executes the install script to download and replace the binary
+4. **Verifies installation** - The new binary is placed in `/usr/local/bin/oforum`
+
+## Update Mechanism
+
+Under the hood, the update command runs:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/arcten/oforum/main/install.sh | sudo sh
+```
+
+The install script:
+- Detects your OS and architecture
+- Downloads the appropriate binary from GitHub releases
+- Replaces the existing `/usr/local/bin/oforum` binary
+- Sets executable permissions
+
+## Privileges
+
+### System Installation (Default)
+
+If oForum is installed in `/usr/local/bin/` (system-wide), you need sudo:
+
+```bash
+oforum update
+```
+
+The command automatically prompts for your password:
+```
+⟳ Updating oforum...
+
+[sudo] password for user:
+```
+
+### User Installation
+
+If you installed oForum in a user-writable location (e.g., `~/bin`), no sudo is needed:
+
+```bash
+oforum update
+```
+
+No password prompt appears.
+
+## Output
+
+### Successful Update
+
+```bash
+oforum update
+```
+
+Output:
+```
+⟳ Updating oforum...
+
+Downloading latest release...
+Installing to /usr/local/bin/oforum
+✓ Updated to v0.0.3
+```
+
+### Already on Latest Version
+
+```
+⟳ Updating oforum...
+
+Current version: v0.0.2
+Latest version: v0.0.2
+Already up to date.
+```
+
+### Update Failed
+
+```
+⟳ Updating oforum...
+
+✗ Update failed: curl: (6) Could not resolve host: github.com
+```
+
+## Verification
+
+After updating, verify the new version:
+
+```bash
+oforum version
+```
+
+Output:
+```
+oforum v0.0.3
+Run 'oforum update' to check for updates
+```
+
+## Safety
+
+The update process is designed to be safe:
+
+- **Atomic replacement** - Binary is downloaded fully before replacing the old one
+- **Automatic backup** - Most systems keep the old binary until reboot
+- **No data loss** - Only the binary is updated; database and configuration are unchanged
+- **No downtime** - Running servers continue until restarted
+
+<Note>
+  After updating, restart any running oForum servers to use the new version.
+</Note>
+
+## Restart Server After Update
+
+The update only replaces the binary. Restart the server to use the new version:
+
+### Manual Restart
+
+```bash
+# Stop running server (Ctrl+C)
+oforum serve
+```
+
+### Systemd
+
+```bash
+sudo systemctl restart oforum
+```
+
+### Docker
+
+```bash
+docker compose down
+docker compose pull
+docker compose up -d
+```
+
+## Rollback
+
+If the update causes issues, you can roll back to a previous version:
+
+### Manual Rollback
+
+1. **Download specific version**:
+   ```bash
+   VERSION=v0.0.2
+   ARCH=$(uname -m)
+   OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+   
+   curl -L "https://github.com/arcten/oforum/releases/download/${VERSION}/oforum_${OS}_${ARCH}" \
+     -o oforum
+   chmod +x oforum
+   sudo mv oforum /usr/local/bin/
+   ```
+
+2. **Verify**:
+   ```bash
+   oforum version
+   ```
+
+## Troubleshooting
+
+### Permission Denied
+
+Error:
+```
+✗ Update failed: Permission denied
+```
+
+Solution: The command should automatically use `sudo`, but if it doesn't:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/arcten/oforum/main/install.sh | sudo sh
+```
+
+### Network Error
+
+Error:
+```
+✗ Update failed: Could not resolve host: github.com
+```
+
+Solution: Check internet connection and try again:
+
+```bash
+ping github.com
+oforum update
+```
+
+### Binary Not Found After Update
+
+Error:
+```bash
+oforum version
+bash: oforum: command not found
+```
+
+Solution: The binary may have been installed to a different location. Find it:
+
+```bash
+find /usr -name oforum 2>/dev/null
+```
+
+Then move it to `/usr/local/bin`:
+
+```bash
+sudo mv /path/to/oforum /usr/local/bin/
+```
+
+### Update Hangs
+
+If the update appears stuck:
+
+1. Press `Ctrl+C` to cancel
+2. Check GitHub status: https://www.githubstatus.com/
+3. Try again later or install manually
+
+## Manual Installation
+
+If automatic updates don't work, install manually:
+
+```bash
+# Download latest release
+curl -L "https://github.com/arcten/oforum/releases/latest/download/oforum_linux_amd64" \
+  -o oforum
+
+# Make executable
+chmod +x oforum
+
+# Move to PATH
+sudo mv oforum /usr/local/bin/
+
+# Verify
+oforum version
+```
+
+See [Installation](/installation) for detailed instructions.
+
+## Automatic Updates
+
+For production deployments, consider automating updates:
+
+### Cron Job
+
+Check for updates weekly:
+
+```bash
+# Edit crontab
+crontab -e
+
+# Add line (runs Sundays at 3 AM)
+0 3 * * 0 /usr/local/bin/oforum update && systemctl restart oforum
+```
+
+### Systemd Timer
+
+Create `/etc/systemd/system/oforum-update.timer`:
+
+```ini
+[Unit]
+Description=oForum Update Check
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Create `/etc/systemd/system/oforum-update.service`:
+
+```ini
+[Unit]
+Description=Update oForum
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/oforum update
+ExecStartPost=/bin/systemctl restart oforum.service
+```
+
+Enable:
+
+```bash
+sudo systemctl enable --now oforum-update.timer
+```
+
+<Warning>
+  Automatic updates can introduce breaking changes. Always test updates in staging first.
+</Warning>
+
+## Checking for Updates
+
+Before updating, check what's new:
+
+```bash
+# Check current version
+oforum version
+
+# Check latest release
+curl -s https://api.github.com/repos/arcten/oforum/releases/latest | \
+  grep '"tag_name"' | cut -d'"' -f4
+
+# View release notes
+curl -s https://api.github.com/repos/arcten/oforum/releases/latest | \
+  grep '"body"'
+```
+
+Or visit: https://github.com/arcten/oforum/releases
+
+## Related Commands
+
+- [version](/cli/version) - Check installed version
+- [serve](/cli/serve) - Start server (restart after updating)

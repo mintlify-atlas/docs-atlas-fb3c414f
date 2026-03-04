@@ -1,0 +1,198 @@
+---
+title: Search
+description: Find posts, users, and discussions using oForum's full-text search
+---
+
+The search feature helps you quickly find posts and discussions across the forum. Search covers post titles, post bodies, and usernames.
+
+## How to Search
+
+<Steps>
+  <Step title="Find the Search Box">
+    Look for the search input (usually marked with a query parameter `q` in the URL).
+  </Step>
+  
+  <Step title="Enter Your Query">
+    Type the keywords you want to search for.
+  </Step>
+  
+  <Step title="View Results">
+    Posts matching your search appear in the main feed.
+  </Step>
+</Steps>
+
+<Note>
+  Search works on both the home page (Top) and New page, maintaining the respective sort order.
+</Note>
+
+## What Gets Searched
+
+The search engine looks through:
+
+1. **Post Titles**: Primary search target for finding relevant discussions
+2. **Post Bodies**: The text content of posts
+3. **Usernames**: Find all posts by a specific user
+
+<Tip>
+  Search is case-insensitive, so "Example", "example", and "EXAMPLE" all return the same results.
+</Tip>
+
+## Search Behavior
+
+Search uses partial matching:
+
+- **Substring search**: Your query can appear anywhere in the title, body, or username
+- **Pattern**: Matches are found using `ILIKE '%query%'`
+- **Multiple words**: All words in your query must appear (in any order)
+
+### Search Examples
+
+<Accordion title="Example: Searching for 'database'">
+  Finds posts with titles or bodies containing:
+  - "Database design tips"
+  - "PostgreSQL database setup"
+  - "My database optimization journey"
+  - Any user named "database_admin"
+</Accordion>
+
+<Accordion title="Example: Searching for 'self hosting'">
+  Finds posts where both "self" AND "hosting" appear in the title, body, or username:
+  - "Self-hosting best practices"
+  - "Hosting guide for self-reliance"
+  - "Guide to hosting your self-hosted apps"
+</Accordion>
+
+## Filtering by Tags
+
+Combine search with tag filtering for precise results:
+
+<Steps>
+  <Step title="Select a Tag">
+    Click any tag to filter posts by that tag.
+  </Step>
+  
+  <Step title="Add a Search Query">
+    The URL will show both `tag=TagName` and `q=search+term`.
+  </Step>
+  
+  <Step title="View Filtered Results">
+    Only posts with that tag AND matching your search term appear.
+  </Step>
+</Steps>
+
+<Tip>
+  Tag filtering narrows results to specific categories, making search more effective in large forums.
+</Tip>
+
+## Search and Post Ranking
+
+Search works differently depending on which view you're in:
+
+### Top View (Default)
+
+- Search results still use the ranking algorithm
+- Posts with more points and recent timestamps rank higher
+- Formula: `points / (age_in_hours + 2)^1.5`
+- Recently upvoted posts matching your query appear first
+
+### New View
+
+- Search results are sorted by creation date only
+- Most recent matching posts appear first
+- Points and ranking don't affect order
+
+This lets you choose whether you want popular results or chronological results.
+
+## Search Syntax and Tips
+
+### Basic Usage
+
+```
+Simple query: database
+Multiple words: database optimization
+User search: username
+Tag + search: (select tag first, then add query)
+```
+
+### Advanced Tips
+
+<Card title="Finding Specific Content" icon="magnifying-glass">
+  - Use specific keywords rather than full sentences
+  - Try variations of your search term ("self-host", "selfhost", "self hosting")
+  - Search for unique phrases from the post you're looking for
+  - Search usernames if you remember who posted it
+</Card>
+
+<Card title="Refining Results" icon="filter">
+  - Start broad, then narrow with tag filters
+  - Try shorter keywords if you get no results
+  - Remember that all words in your query must match
+  - Check spelling—search is literal (though case-insensitive)
+</Card>
+
+<Note>
+  Special characters and punctuation are included in the search. Searching for "self-host" is different from "self host".
+</Note>
+
+## Search Limitations
+
+Current search functionality:
+
+- **No comment search**: Only post titles, bodies, and usernames are searched
+- **No operators**: Boolean operators (AND, OR, NOT) are not supported
+- **No fuzzy matching**: Exact substring matches only (no spell correction)
+- **No stemming**: "host" won't match "hosting" unless both are present
+
+<Tip>
+  If you can't find something, try:
+  - Searching for a shorter keyword
+  - Browsing by tag instead
+  - Checking the user's profile if you remember the author
+  - Looking through the "new" feed for recent posts
+</Tip>
+
+## Best Practices
+
+### For Finding Content
+
+1. **Start specific**: Use unique keywords from the post you remember
+2. **Broaden if needed**: Remove words to expand your search
+3. **Use tags**: Combine search with tag filters for better precision
+4. **Try usernames**: Search for the author if you know who posted it
+
+### For Making Your Content Searchable
+
+When creating posts:
+
+1. **Clear titles**: Use descriptive titles with searchable keywords
+2. **Add context**: Include relevant terms in your post body
+3. **Use tags**: Proper tagging helps users filter searches
+4. **Avoid jargon**: Common terms are more searchable than acronyms
+
+<Tip>
+  Good post titles improve discoverability. "Database Optimization Tips" is more searchable than "Some thoughts on DBs".
+</Tip>
+
+## Search Performance
+
+Search is optimized for quick results:
+
+- Uses database indexes for fast lookup
+- Results paginate like normal post feeds (20 per page)
+- Search queries are processed server-side
+- No client-side search or autocomplete (keeps the interface minimal)
+
+<Note>
+  Very broad searches (like single common letters) may return many results. Use more specific terms for better performance.
+</Note>
+
+## Combining Search with Navigation
+
+Search integrates with forum navigation:
+
+- **Pagination**: Search results are paginated (use `p` parameter)
+- **Sorting**: Respects Top/New view selection
+- **Tags**: Works alongside tag filtering
+- **URL structure**: `?q=search&tag=TagName&p=2`
+
+You can bookmark specific search/filter combinations to quickly return to them.

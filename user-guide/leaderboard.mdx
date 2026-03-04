@@ -1,0 +1,224 @@
+---
+title: Leaderboard
+description: Track top contributors and see who's leading the community by reputation
+---
+
+The leaderboard ranks users by reputation, showcasing the most active and valued contributors in your oForum community.
+
+## How to Access
+
+Click "leaderboard" in the navigation menu to view the rankings. The leaderboard is public and accessible to all users, including visitors without accounts.
+
+## How Rankings Work
+
+Users are ranked by their reputation score, which is calculated from upvotes:
+
+### Primary Sort: Reputation
+
+The leaderboard sorts users by total reputation (karma):
+
+```
+Reputation = Total upvotes on user's posts + Total upvotes on user's comments
+```
+
+Higher reputation = higher ranking.
+
+### Secondary Sort: Account Age
+
+When users have identical reputation scores, the tiebreaker is account age:
+- Older accounts (earlier join dates) rank higher
+- This rewards early community members
+- Ensures stable rankings even at lower reputation levels
+
+<Accordion title="Example: Ranking with Ties">
+  Three users with 50 reputation each:
+  
+  1. **Alice** (joined Jan 2024) - Ranks 1st
+  2. **Bob** (joined Feb 2024) - Ranks 2nd  
+  3. **Carol** (joined Mar 2024) - Ranks 3rd
+  
+  Even with identical reputation, account age breaks the tie.
+</Accordion>
+
+## Information Displayed
+
+The leaderboard shows:
+
+- **Rank**: Position in the rankings (1st, 2nd, 3rd, etc.)
+- **Username**: Clickable link to user profile
+- **Reputation**: Total karma points
+- **Post Count**: Number of posts created
+- **Roles/Badges**: Any roles assigned to the user
+- **Join Date**: When the account was created
+
+<Note>
+  The leaderboard displays up to 100 users by default. This limit keeps the page performant even in large communities.
+</Note>
+
+## User Statistics
+
+Each leaderboard entry provides key metrics:
+
+### Reputation
+
+The total number of upvotes across all the user's content:
+- Reflects overall community appreciation
+- Accumulated over the entire account lifetime
+- Updates in real-time as upvotes are added or removed
+
+### Post Count
+
+The total number of posts the user has created:
+- Indicates posting activity level
+- Doesn't affect ranking (only reputation does)
+- Helps identify prolific contributors
+
+<Tip>
+  Post count and reputation tell different stories. Someone with few posts but high reputation creates particularly valuable content. Someone with many posts and moderate reputation is consistently active.
+</Tip>
+
+### Join Date
+
+Shows how long the user has been a community member:
+- Format: Displays creation date
+- Contextualizes reputation (e.g., high reputation in a short time = very active)
+- Used as tiebreaker for identical reputations
+
+## Roles on the Leaderboard
+
+User roles and badges appear on the leaderboard:
+
+- Displayed next to usernames
+- Colored badges based on role configuration
+- Shows highest-priority role if user has multiple
+- Helps identify moderators, admins, and other special roles
+
+<Note>
+  Roles don't affect leaderboard ranking—they're purely informational. A user with an admin role won't rank higher unless they have more reputation.
+</Note>
+
+## Community Engagement
+
+The leaderboard serves multiple purposes:
+
+### Recognition
+
+- Publicly acknowledges valuable contributors
+- Motivates quality participation
+- Celebrates community leaders
+- Makes top contributors easy to find
+
+### Discovery
+
+- Find knowledgeable users to follow
+- Identify active community members
+- See who's creating popular content
+- Discover potential mentors or experts
+
+### Gamification
+
+- Creates friendly competition
+- Encourages thoughtful contributions
+- Provides progression feedback
+- Makes participation more engaging
+
+<Tip>
+  The leaderboard is motivational, not competitive. Focus on contributing meaningfully rather than chasing rank. Quality engagement naturally leads to reputation growth.
+</Tip>
+
+## Time Periods
+
+Currently, the leaderboard shows all-time statistics:
+
+- **Lifetime reputation**: Total accumulated since account creation
+- **No time filters**: All history is included in rankings
+- **Cumulative totals**: Upvotes from any time period count
+
+<Note>
+  Future versions may include time-filtered leaderboards (weekly, monthly, yearly) to highlight recent contributors alongside all-time leaders.
+</Note>
+
+## How to Improve Your Ranking
+
+Ranking higher on the leaderboard comes from consistent, valuable participation:
+
+<Steps>
+  <Step title="Create Quality Posts">
+    Post thoughtful, well-titled content that resonates with the community. Quality over quantity.
+  </Step>
+  
+  <Step title="Contribute Helpful Comments">
+    Add value to discussions with insightful, helpful, or informative comments.
+  </Step>
+  
+  <Step title="Engage Regularly">
+    Consistent participation over time builds reputation steadily.
+  </Step>
+  
+  <Step title="Use Tags Appropriately">
+    Help your posts reach the right audience with accurate tagging.
+  </Step>
+</Steps>
+
+### What Doesn't Help
+
+- Posting frequently without quality (post count doesn't affect rank)
+- Self-promotion without value to the community
+- Controversial content for attention (may get downvoted or ignored)
+- Gaming the system (upvote manipulation, spam)
+
+<Warning>
+  Focus on authentic engagement. The community naturally upvotes genuinely valuable contributions. Trying to manipulate rankings typically backfires.
+</Warning>
+
+## Reputation Growth Rate
+
+Reputation accumulates differently for everyone:
+
+- **Active posters**: Gain reputation from multiple post upvotes
+- **Active commenters**: Earn reputation from comment upvotes
+- **Mixed contributors**: Both posts and comments contribute equally
+- **Timing matters**: Posting when the community is active increases visibility
+
+<Accordion title="Reputation Growth Example">
+  **Week 1:**
+  - Create 3 posts: earn 5, 12, and 3 upvotes (20 total)
+  - Write 10 comments: earn 1-2 upvotes each (15 total)
+  - **Total reputation: 35**
+  
+  **Week 2:**
+  - Earlier posts continue gaining upvotes (8 more)
+  - Create 2 more posts: earn 7 and 4 upvotes (11 total)
+  - Write 15 comments: earn 18 upvotes total
+  - **Total reputation: 72 (35 + 37 new)**
+  
+  Reputation compounds as older content continues receiving upvotes.
+</Accordion>
+
+<Tip>
+  Great content can earn upvotes long after posting. A well-written post or helpful comment may accumulate reputation for weeks or months.
+</Tip>
+
+## Leaderboard Performance
+
+The leaderboard is optimized for quick loading:
+
+- Limited to top 100 users
+- Cached for performance
+- Updates reflect current data
+- Efficient database queries
+
+<Note>
+  In very large forums, appearing on the leaderboard itself becomes an achievement as competition increases.
+</Note>
+
+## Who Can See the Leaderboard
+
+The leaderboard is fully public:
+
+- No login required
+- Visible to guests and members
+- Can be shared externally
+- Part of the public forum interface
+
+This transparency highlights your community's most valued contributors to everyone, encouraging quality participation.

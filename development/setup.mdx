@@ -1,0 +1,290 @@
+---
+title: Development Setup
+description: Set up your local development environment for oForum
+---
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+<CardGroup cols={2}>
+  <Card title="Go 1.25+" icon="golang">
+    Download from [go.dev](https://go.dev/dl/)
+  </Card>
+  <Card title="PostgreSQL" icon="database">
+    Running locally or accessible via connection string
+  </Card>
+  <Card title="Git" icon="git">
+    For version control
+  </Card>
+  <Card title="make (optional)" icon="terminal">
+    For using Makefile commands
+  </Card>
+</CardGroup>
+
+## Initial Setup
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/arcten/oforum.git
+    cd oforum
+    ```
+  </Step>
+  
+  <Step title="Create Database">
+    Create a PostgreSQL database for development:
+    ```bash
+    createdb oforum
+    ```
+    
+    Or using psql:
+    ```sql
+    CREATE DATABASE oforum;
+    ```
+  </Step>
+  
+  <Step title="Configure Environment">
+    Copy the example environment file and edit if needed:
+    ```bash
+    cp .env.example .env
+    ```
+    
+    Default `.env` contents:
+    ```bash
+    DATABASE_URL=postgres://localhost:5432/oforum?sslmode=disable
+    PORT=8080
+    ```
+    
+    <Note>
+    If your PostgreSQL uses different credentials, update `DATABASE_URL` accordingly:
+    ```
+    postgres://username:password@host:5432/dbname?sslmode=disable
+    ```
+    </Note>
+  </Step>
+  
+  <Step title="Run the Application">
+    Migrations run automatically on startup:
+    ```bash
+    go run main.go
+    ```
+    
+    You should see:
+    ```
+    Migrations applied successfully
+    Starting server on :8080
+    ```
+  </Step>
+  
+  <Step title="Open in Browser">
+    Navigate to [http://localhost:8080](http://localhost:8080)
+  </Step>
+</Steps>
+
+## Create Test Admin User
+
+You'll need an admin account to access the admin panel.
+
+<Tabs>
+  <Tab title="Using Seed Data">
+    The quickest way is to seed demo data:
+    ```bash
+    go run cmd/seed/main.go
+    ```
+    
+    This creates:
+    - **30 users** (first user "alice" is admin)
+    - **50 posts** with varied content
+    - **200 comments** in threaded discussions
+    - **300 upvotes** distributed across content
+    
+    **Login credentials:**
+    ```
+    Username: alice
+    Password: password123
+    ```
+  </Tab>
+  
+  <Tab title="Manual Promotion">
+    Sign up manually through the UI, then promote yourself:
+    ```bash
+    psql oforum -c "UPDATE users SET is_admin = true WHERE username = 'yourname';"
+    ```
+    
+    Or create an admin role and assign it:
+    ```sql
+    -- Create admin role
+    INSERT INTO roles (name, color, sort_order, is_admin_rank) 
+    VALUES ('Admin', '#ef4444', 1, true);
+    
+    -- Assign to user
+    INSERT INTO user_roles (user_id, role_id)
+    SELECT u.id, r.id 
+    FROM users u, roles r 
+    WHERE u.username = 'yourname' AND r.name = 'Admin';
+    ```
+  </Tab>
+</Tabs>
+
+## Hot Reload Development
+
+For faster development, use [air](https://github.com/air-verse/air) to auto-restart the server on file changes:
+
+<Steps>
+  <Step title="Install air">
+    ```bash
+    go install github.com/air-verse/air@latest
+    ```
+  </Step>
+  
+  <Step title="Run with Hot Reload">
+    ```bash
+    make dev
+    ```
+    
+    Or directly:
+    ```bash
+    air
+    ```
+    
+    The server will restart automatically when you edit `.go`, `.html`, or `.sql` files.
+  </Step>
+</Steps>
+
+<Note>
+With `air` running, changes to templates and handlers take effect immediately without manual restart.
+</Note>
+
+## Common Development Commands
+
+### Using Make
+
+```bash
+make dev          # Start with hot reload (air)
+make build        # Build binary
+make release      # Cross-compile for all platforms
+make seed         # Seed test data
+make test         # Run tests
+```
+
+### Manual Commands
+
+<CodeGroup>
+```bash Run Server
+go run main.go
+```
+
+```bash Run Migrations Only
+go run main.go migrate
+```
+
+```bash Seed Database
+go run cmd/seed/main.go
+```
+
+```bash Build Binary
+go build -o oforum main.go
+```
+
+```bash Run Tests
+go test ./...
+```
+</CodeGroup>
+
+## Running Tests
+
+oForum includes tests for core functionality:
+
+```bash
+# Run all tests
+go test ./...
+
+# Run with verbose output
+go test -v ./...
+
+# Run specific package tests
+go test ./internal/db/
+
+# Run tests with coverage
+go test -cover ./...
+```
+
+## Database Management
+
+### Reset Database
+
+To start fresh during development:
+
+```bash
+# Drop and recreate
+dropdb oforum
+createdb oforum
+
+# Restart server (migrations run automatically)
+go run main.go
+```
+
+### Inspect Database
+
+```bash
+# Connect to database
+psql oforum
+
+# View tables
+\dt
+
+# View schema
+\d users
+\d posts
+\d comments
+
+# Count records
+SELECT COUNT(*) FROM posts;
+```
+
+## Troubleshooting
+
+### "Failed to connect to database"
+
+1. Ensure PostgreSQL is running:
+   ```bash
+   pg_isready
+   ```
+
+2. Check your `DATABASE_URL` in `.env`
+
+3. Verify database exists:
+   ```bash
+   psql -l | grep oforum
+   ```
+
+### "Migration failed"
+
+- Ensure no other instance is running
+- Check migration files in `migrations/` are numbered sequentially
+- Reset the database if needed
+
+### Port Already in Use
+
+Change the port in `.env`:
+```bash
+PORT=3000
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Understand Architecture" icon="diagram-project" href="/development/architecture">
+    Learn how the codebase is structured
+  </Card>
+  <Card title="Work with Database" icon="database" href="/development/database">
+    Explore query patterns and migrations
+  </Card>
+  <Card title="Edit Templates" icon="file-code" href="/development/templates">
+    Modify the UI and template functions
+  </Card>
+  <Card title="Authentication Flow" icon="lock" href="/development/authentication">
+    Understand security and sessions
+  </Card>
+</CardGroup>

@@ -1,0 +1,483 @@
+---
+title: Manual deployment
+description: Install and run oForum directly on Linux or macOS servers with full control over your infrastructure
+---
+
+Manual deployment gives you complete control over your oForum installation. This guide covers binary installation, PostgreSQL setup, systemd services, and reverse proxy configuration.
+
+## Prerequisites
+
+You'll need:
+
+- **Server**: Linux (amd64/arm64) or macOS
+- **PostgreSQL**: Version 12 or higher
+- **Reverse proxy**: nginx or Caddy (for SSL/TLS)
+- **Root access**: For systemd service installation
+
+## Installing oForum
+
+### Automated installation
+
+The easiest way to install oForum:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/arcten/oforum/main/install.sh | sudo sh
+```
+
+This installs the binary to `/usr/local/bin/oforum`.
+
+### Manual installation
+
+Or download pre-built binaries from the [releases page](https://github.com/arcten/oforum/releases):
+
+<Steps>
+  <Step title="Download the binary">
+    ```bash
+    # For Linux amd64
+    wget https://github.com/arcten/oforum/releases/latest/download/oforum-linux-amd64
+
+    # For Linux arm64
+    wget https://github.com/arcten/oforum/releases/latest/download/oforum-linux-arm64
+
+    # For macOS
+    wget https://github.com/arcten/oforum/releases/latest/download/oforum-darwin-amd64
+    ```
+  </Step>
+  
+  <Step title="Make it executable">
+    ```bash
+    chmod +x oforum-linux-amd64
+    sudo mv oforum-linux-amd64 /usr/local/bin/oforum
+    ```
+  </Step>
+  
+  <Step title="Verify installation">
+    ```bash
+    oforum version
+    ```
+
+    You should see:
+    ```
+    oforum v0.0.2
+    ```
+  </Step>
+</Steps>
+
+### Building from source
+
+If you prefer to build from source:
+
+```bash
+git clone https://github.com/arcten/oforum.git
+cd oforum
+go build -o oforum .
+sudo mv oforum /usr/local/bin/
+```
+
+Requires Go 1.21 or higher.
+
+## PostgreSQL setup
+
+### Installing PostgreSQL
+
+<CodeGroup>
+
+```bash Ubuntu/Debian
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
+
+```bash CentOS/RHEL
+sudo yum install postgresql-server postgresql-contrib
+sudo postgresql-setup initdb
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
+
+```bash macOS
+brew install postgresql@16
+brew services start postgresql@16
+```
+
+</CodeGroup>
+
+### Creating the database
+
+<Steps>
+  <Step title="Switch to postgres user">
+    ```bash
+    sudo -u postgres psql
+    ```
+  </Step>
+  
+  <Step title="Create user and database">
+    ```sql
+    CREATE USER oforum WITH PASSWORD 'your_secure_password';
+    CREATE DATABASE oforum OWNER oforum;
+    GRANT ALL PRIVILEGES ON DATABASE oforum TO oforum;
+    \q
+    ```
+  </Step>
+  
+  <Step title="Test the connection">
+    ```bash
+    psql -U oforum -d oforum -h localhost
+    ```
+
+    Enter the password when prompted. If you can connect, you're ready.
+  </Step>
+</Steps>
+
+### Securing PostgreSQL
+
+Edit `/etc/postgresql/*/main/pg_hba.conf` (path may vary):
+
+```conf pg_hba.conf
+# Allow password authentication for oforum user
+local   oforum          oforum                                  md5
+host    oforum          oforum          127.0.0.1/32            md5
+```
+
+Reload PostgreSQL:
+```bash
+sudo systemctl reload postgresql
+```
+
+## Configuring oForum
+
+### Create environment file
+
+Create a configuration directory:
+
+```bash
+sudo mkdir -p /etc/oforum
+sudo chmod 755 /etc/oforum
+```
+
+Run the interactive setup:
+
+```bash
+cd /etc/oforum
+sudo oforum init
+```
+
+Or create `.env` manually:
+
+```bash .env
+DATABASE_URL=postgres://oforum:your_secure_password@localhost:5432/oforum?sslmode=disable
+PORT=8080
+```
+
+<Warning>
+  Protect your `.env` file:
+  ```bash
+  sudo chmod 600 /etc/oforum/.env
+  sudo chown root:root /etc/oforum/.env
+  ```
+</Warning>
+
+### Run migrations
+
+```bash
+cd /etc/oforum
+sudo oforum migrate
+```
+
+You should see:
+```
+⟳ Running migrations...
+✓ Migrations applied
+```
+
+### Test the server
+
+Start oForum manually to verify everything works:
+
+```bash
+cd /etc/oforum
+sudo oforum
+```
+
+Visit `http://localhost:8080`. If it works, stop the server (Ctrl+C) and set up systemd.
+
+## Systemd service
+
+Create a systemd service to run oForum automatically:
+
+<Steps>
+  <Step title="Create service file">
+    ```bash
+    sudo nano /etc/systemd/system/oforum.service
+    ```
+
+    Add this configuration:
+
+    ```ini /etc/systemd/system/oforum.service
+    [Unit]
+    Description=oForum - Minimal Self-Hostable Forum
+    After=network.target postgresql.service
+    Requires=postgresql.service
+
+    [Service]
+    Type=simple
+    User=www-data
+    Group=www-data
+    WorkingDirectory=/etc/oforum
+    EnvironmentFile=/etc/oforum/.env
+    ExecStart=/usr/local/bin/oforum
+    Restart=always
+    RestartSec=5
+    StandardOutput=journal
+    StandardError=journal
+    SyslogIdentifier=oforum
+
+    # Security hardening
+    NoNewPrivileges=true
+    PrivateTmp=true
+    ProtectSystem=strict
+    ProtectHome=true
+    ReadWritePaths=/etc/oforum
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+  </Step>
+  
+  <Step title="Set permissions">
+    ```bash
+    sudo chown -R www-data:www-data /etc/oforum
+    ```
+  </Step>
+  
+  <Step title="Enable and start service">
+    ```bash
+    sudo systemctl daemon-reload
+    sudo systemctl enable oforum
+    sudo systemctl start oforum
+    ```
+  </Step>
+  
+  <Step title="Check status">
+    ```bash
+    sudo systemctl status oforum
+    ```
+
+    You should see:
+    ```
+    ● oforum.service - oForum - Minimal Self-Hostable Forum
+       Active: active (running)
+    ```
+  </Step>
+</Steps>
+
+### View logs
+
+```bash
+sudo journalctl -u oforum -f
+```
+
+## Reverse proxy setup
+
+oForum serves plain HTTP. Use a reverse proxy for SSL/TLS termination:
+
+### nginx
+
+<Steps>
+  <Step title="Install nginx">
+    ```bash
+    sudo apt install nginx
+    ```
+  </Step>
+  
+  <Step title="Create site configuration">
+    ```bash
+    sudo nano /etc/nginx/sites-available/oforum
+    ```
+
+    ```nginx /etc/nginx/sites-available/oforum
+    server {
+        listen 80;
+        server_name forum.yourdomain.com;
+
+        location / {
+            proxy_pass http://127.0.0.1:8080;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+    ```
+  </Step>
+  
+  <Step title="Enable site">
+    ```bash
+    sudo ln -s /etc/nginx/sites-available/oforum /etc/nginx/sites-enabled/
+    sudo nginx -t
+    sudo systemctl reload nginx
+    ```
+  </Step>
+</Steps>
+
+### Caddy (easier SSL)
+
+Caddy automatically provisions SSL certificates:
+
+<Steps>
+  <Step title="Install Caddy">
+    ```bash
+    sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+    sudo apt update
+    sudo apt install caddy
+    ```
+  </Step>
+  
+  <Step title="Create Caddyfile">
+    ```bash
+    sudo nano /etc/caddy/Caddyfile
+    ```
+
+    ```caddyfile /etc/caddy/Caddyfile
+    forum.yourdomain.com {
+        reverse_proxy localhost:8080
+    }
+    ```
+
+    That's it! Caddy handles HTTPS automatically.
+  </Step>
+  
+  <Step title="Reload Caddy">
+    ```bash
+    sudo systemctl reload caddy
+    ```
+  </Step>
+</Steps>
+
+## SSL/TLS with Let's Encrypt (nginx)
+
+For nginx, use Certbot to get free SSL certificates:
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d forum.yourdomain.com
+```
+
+Certbot will:
+1. Verify domain ownership
+2. Obtain SSL certificate
+3. Automatically configure nginx
+4. Set up auto-renewal
+
+Test renewal:
+```bash
+sudo certbot renew --dry-run
+```
+
+## Updates and maintenance
+
+### Updating oForum
+
+```bash
+sudo oforum update
+sudo systemctl restart oforum
+```
+
+Or manually:
+
+```bash
+wget https://github.com/arcten/oforum/releases/latest/download/oforum-linux-amd64
+chmod +x oforum-linux-amd64
+sudo mv oforum-linux-amd64 /usr/local/bin/oforum
+sudo systemctl restart oforum
+```
+
+### Database backups
+
+Automate PostgreSQL backups:
+
+```bash
+#!/bin/bash
+# /usr/local/bin/backup-oforum.sh
+
+BACKUP_DIR="/var/backups/oforum"
+DATABASE="oforum"
+USER="oforum"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+mkdir -p $BACKUP_DIR
+pg_dump -U $USER -h localhost $DATABASE | gzip > $BACKUP_DIR/oforum_$DATE.sql.gz
+
+# Keep only last 7 days
+find $BACKUP_DIR -name "oforum_*.sql.gz" -mtime +7 -delete
+```
+
+Make it executable:
+```bash
+sudo chmod +x /usr/local/bin/backup-oforum.sh
+```
+
+Add to crontab (daily at 2 AM):
+```bash
+sudo crontab -e
+```
+
+```cron
+0 2 * * * /usr/local/bin/backup-oforum.sh
+```
+
+### Monitoring
+
+Check service health:
+```bash
+sudo systemctl status oforum
+sudo journalctl -u oforum --since "1 hour ago"
+```
+
+Monitor resource usage:
+```bash
+top -p $(pgrep oforum)
+```
+
+## Troubleshooting
+
+### Service won't start
+
+Check logs:
+```bash
+sudo journalctl -u oforum -n 50
+```
+
+Verify environment file:
+```bash
+sudo cat /etc/oforum/.env
+```
+
+### Database connection errors
+
+Test PostgreSQL connection:
+```bash
+psql -U oforum -d oforum -h localhost
+```
+
+Check PostgreSQL is running:
+```bash
+sudo systemctl status postgresql
+```
+
+### Permission denied errors
+
+Fix ownership:
+```bash
+sudo chown -R www-data:www-data /etc/oforum
+sudo chmod 600 /etc/oforum/.env
+```
+
+## Next steps
+
+- [Environment variables reference](/self-hosting/environment)
+- [Security best practices](/self-hosting/overview#security-considerations)
+- Set up monitoring with your preferred tools (Prometheus, Grafana, etc.)

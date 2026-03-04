@@ -1,0 +1,162 @@
+---
+title: Contributing Overview
+description: Learn how to contribute to oForum and understand its design principles
+---
+
+## Introduction
+
+Thanks for your interest in contributing to oForum! This forum application is intentionally simple — a single Go binary, server-rendered HTML, and PostgreSQL. Contributions that keep it that way are welcome.
+
+oForum is built to be:
+- Easy to self-host (one binary + one database)
+- Fast (pages render in milliseconds)
+- Simple to understand (plain SQL, no abstractions)
+- Minimal dependencies (only essential packages)
+
+## Design Principles
+
+These principles guide all development decisions:
+
+<CardGroup cols={2}>
+  <Card title="Single Binary" icon="cube">
+    Everything compiles into one executable, including migrations and templates embedded via `//go:embed`
+  </Card>
+  <Card title="Zero Config" icon="sliders">
+    One env var (`DATABASE_URL`), sensible defaults for everything else. No config files.
+  </Card>
+  <Card title="Server-Rendered" icon="server">
+    HTML is generated on the server using Go's `html/template`. No client-side framework.
+  </Card>
+  <Card title="Plain SQL" icon="database">
+    No ORM — just pgx and handwritten queries. Queries live in `internal/db/`.
+  </Card>
+  <Card title="Minimal Dependencies" icon="box">
+    Only Gin, pgx, bcrypt, and golang-migrate. That's the entire dependency tree.
+  </Card>
+  <Card title="Fast" icon="bolt">
+    The binary starts in under a second. Pages should render in milliseconds.
+  </Card>
+</CardGroup>
+
+## Code Style Guidelines
+
+### Formatting
+
+All code must pass `gofmt` before committing:
+
+```bash
+# Check formatting
+gofmt -l $(find . -name '*.go' -not -path './.git/*')
+
+# Format everything
+gofmt -w $(find . -name '*.go' -not -path './.git/*')
+```
+
+### Architecture Rules
+
+<Note>
+Keep it simple. No abstractions for the sake of abstractions.
+</Note>
+
+- **SQL queries** go in `internal/db/`, not in handlers
+- **Handlers** should be thin — get data, build template data, render
+- **No external JavaScript** — if something needs interactivity, use vanilla JS in the template
+- **Database changes** require migration files (`up` and `down`)
+
+### Code Quality
+
+```bash
+# Vet for issues
+go vet ./...
+
+# Build check
+go build ./...
+
+# Run tests
+go test ./...
+```
+
+## Pull Request Process
+
+<Steps>
+  <Step title="Fork and Branch">
+    Fork the repository and create a feature branch:
+    ```bash
+    git checkout -b my-feature
+    ```
+  </Step>
+  
+  <Step title="Make Changes">
+    Implement your feature or fix. Keep PRs focused — one feature or fix per PR.
+  </Step>
+  
+  <Step title="Format and Vet">
+    Run formatting and checks:
+    ```bash
+    gofmt -w .
+    go vet ./...
+    ```
+  </Step>
+  
+  <Step title="Commit with Clear Message">
+    Write a descriptive commit message explaining the "why" not just the "what":
+    ```bash
+    git commit -m "Add post search by tag and title"
+    ```
+  </Step>
+  
+  <Step title="Open Pull Request">
+    Push your branch and open a PR. If it touches the database schema, include the migration files.
+  </Step>
+</Steps>
+
+<Note>
+If your PR adds a new database field, you **must** include both `.up.sql` and `.down.sql` migration files.
+</Note>
+
+## Development Resources
+
+### Key Files
+
+| File | Purpose |
+|------|--------|
+| `main.go:273-311` | Template function registration |
+| `main.go:322-382` | Route definitions |
+| `internal/models/models.go` | All data structures |
+| `internal/handlers/helpers.go` | Template helper functions |
+| `internal/auth/middleware.go` | Authentication middleware |
+
+### Documentation
+
+- [Development Setup](/development/setup) — Get your local environment running
+- [Architecture](/development/architecture) — Understand the codebase structure
+- [Database](/development/database) — Learn the query patterns
+- [Templates](/development/templates) — Work with Go templates
+- [Authentication](/development/authentication) — Security and sessions
+
+## What to Contribute
+
+### Good First Issues
+
+- **Documentation improvements** — clarify confusing sections
+- **Bug fixes** — fix reported issues
+- **Tests** — add test coverage
+- **Template refinements** — improve UI/UX
+
+### Larger Features
+
+Before starting work on a major feature:
+1. Open an issue to discuss the approach
+2. Ensure it aligns with the design principles
+3. Keep the PR focused and reviewable
+
+## Getting Help
+
+If you're stuck or have questions:
+- Check the [CONTRIBUTING.md](https://github.com/arcten/oforum/blob/main/CONTRIBUTING.md) in the repo
+- Open a GitHub issue with the `question` label
+- Review existing code in `internal/` to see patterns
+
+---
+
+**Ready to start?** Head to [Development Setup](/development/setup) to get your environment running.

@@ -1,0 +1,196 @@
+---
+title: 'User Management'
+description: 'Manage users, view statistics, handle bans, and assign roles'
+---
+
+The user management interface (`/admin/users`) provides comprehensive tools to oversee your forum community. View user activity, moderate accounts, and assign roles.
+
+## Viewing All Users
+
+The user list displays all registered users with key statistics:
+
+- **Username**: User's login name
+- **Display name**: Public display name
+- **Email**: Registered email address
+- **Admin status**: Whether user has `is_admin` flag
+- **Post count**: Total posts created
+- **Comment count**: Total comments made
+- **Roles**: Assigned roles (displayed as colored badges)
+- **Registration date**: Account creation timestamp
+- **Ban status**: Current ban state if applicable
+
+### User Search
+
+Search for specific users by username using the search box. The search performs a case-insensitive partial match:
+
+```
+Search: "john" → Matches: john, johnny, johnson
+```
+
+### Pagination
+
+The user list displays 30 users per page. Navigate between pages using the pagination controls at the bottom of the list.
+
+## User Statistics
+
+Each user row displays activity metrics:
+
+<ParamField path="post_count" type="integer">
+  Total number of posts created by the user. This metric helps identify active content creators.
+</ParamField>
+
+<ParamField path="comment_count" type="integer">
+  Total number of comments made by the user. Indicates engagement level in discussions.
+</ParamField>
+
+<ParamField path="karma" type="integer">
+  Combined reputation from post and comment upvotes. Represents community recognition.
+</ParamField>
+
+These statistics are calculated in real-time from the database and help you identify:
+
+- Active contributors
+- Inactive or dormant accounts
+- Potential spam accounts (high post count, low engagement)
+- Community leaders (high karma)
+
+## Banning Users
+
+You can temporarily or permanently restrict user access through bans. When banned, users cannot create posts, comment, or vote.
+
+<Steps>
+  <Step title="Select ban duration">
+    Choose from preset durations or set a custom time:
+    
+    - **1 hour**: Short timeout for minor violations
+    - **24 hours**: Standard temporary ban
+    - **7 days**: Week-long suspension
+    - **30 days**: Month-long suspension
+    - **Permanent**: Effective 100-year ban
+    - **Custom**: Specify minutes for precise control
+  </Step>
+  
+  <Step title="Apply the ban">
+    Click the ban button next to the user. The ban takes effect immediately.
+  </Step>
+  
+  <Step title="Verify ban status">
+    The user list displays ban status and expiration time for banned users.
+  </Step>
+</Steps>
+
+<Warning>
+  Bans prevent all user activity but do not delete the account or content. Banned users can still view the forum but cannot participate.
+</Warning>
+
+### Ban Implementation
+
+Bans are stored in the `banned_until` field. The system checks this timestamp on each request:
+
+```go
+func (u User) IsBanned() bool {
+    return u.BannedUntil != nil && u.BannedUntil.After(time.Now())
+}
+```
+
+## Unbanning Users
+
+You can remove bans at any time, allowing immediate restoration of user privileges:
+
+<Steps>
+  <Step title="Locate banned user">
+    Find the user in the user list. Banned users show their ban expiration time.
+  </Step>
+  
+  <Step title="Click unban">
+    Click the unban button to immediately clear the ban status.
+  </Step>
+  
+  <Step title="Confirm restoration">
+    The user can now participate in the forum immediately.
+  </Step>
+</Steps>
+
+## Assigning Roles
+
+Roles provide visual distinction and can grant admin privileges. Assign roles to users to recognize contributions or delegate moderation:
+
+<Steps>
+  <Step title="View available roles">
+    The user management interface displays all available roles in a dropdown menu.
+  </Step>
+  
+  <Step title="Select role">
+    Choose the role you want to assign from the dropdown next to the user.
+  </Step>
+  
+  <Step title="Apply assignment">
+    Click the assign button. The role badge appears immediately next to the username.
+  </Step>
+</Steps>
+
+<Note>
+  Users can have multiple roles simultaneously. Roles are displayed in order of their `sort_order` property.
+</Note>
+
+### Admin Roles
+
+Roles with `is_admin_rank` enabled grant administrative privileges equivalent to the `is_admin` flag. This allows role-based permission delegation:
+
+- Users with admin roles can access the admin panel
+- Admin roles typically include "owner", "moderator", or custom titles
+- The "owner" role is protected and cannot be deleted
+
+## Removing Roles
+
+You can remove individual roles from users:
+
+<Steps>
+  <Step title="Locate user role">
+    Find the role badge displayed next to the user's name.
+  </Step>
+  
+  <Step title="Click remove">
+    Click the remove icon on the role badge.
+  </Step>
+  
+  <Step title="Confirm removal">
+    The role is removed immediately.
+  </Step>
+</Steps>
+
+<Warning>
+  The system prevents removing the "owner" role if it would leave zero owners. This ensures at least one user retains full administrative access.
+</Warning>
+
+## User Activity Monitoring
+
+Monitor user activity to identify patterns and potential issues:
+
+### Active Users
+
+Users with high post and comment counts are your community's content creators. Consider:
+
+- Assigning recognition roles
+- Featuring their contributions
+- Soliciting feedback on forum improvements
+
+### Inactive Accounts
+
+Accounts with zero or minimal activity may indicate:
+
+- Abandoned registrations
+- Alt accounts
+- Potential spam accounts awaiting activation
+
+### Suspicious Patterns
+
+Watch for unusual activity patterns:
+
+- Sudden spike in posts (potential spam)
+- Zero engagement on multiple posts (low-quality content)
+- Multiple accounts from same timeframe (possible bot registration)
+
+<Note>
+  The user management interface provides sorting and filtering to help identify these patterns quickly.
+</Note>

@@ -1,0 +1,396 @@
+---
+title: Environment variables
+description: Complete reference for configuring oForum through environment variables
+---
+
+oForum is configured entirely through environment variables. No configuration files required.
+
+## Quick reference
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
+| `PORT` | No | `8080` | HTTP server port |
+
+## DATABASE_URL
+
+<Note>
+  **Required** - oForum cannot start without a database connection.
+</Note>
+
+PostgreSQL connection string in the standard URI format:
+
+```bash
+DATABASE_URL="postgres://username:password@host:port/database?options"
+```
+
+### Format breakdown
+
+```
+postgres://[user]:[password]@[host]:[port]/[database]?[options]
+```
+
+**Components:**
+
+- `user`: PostgreSQL username
+- `password`: User password (URL-encoded if it contains special characters)
+- `host`: Database server hostname or IP address
+- `port`: PostgreSQL port (default: 5432)
+- `database`: Database name
+- `options`: Additional connection parameters (see below)
+
+### Examples
+
+<CodeGroup>
+
+```bash Local development
+DATABASE_URL="postgres://localhost:5432/oforum?sslmode=disable"
+```
+
+```bash With authentication
+DATABASE_URL="postgres://oforum:mypassword@localhost:5432/oforum?sslmode=disable"
+```
+
+```bash Remote database (SSL required)
+DATABASE_URL="postgres://user:pass@db.example.com:5432/oforum?sslmode=require"
+```
+
+```bash Fly.io PostgreSQL
+DATABASE_URL="postgres://oforum:pass@oforum-db.internal:5432/oforum?sslmode=disable"
+```
+
+```bash AWS RDS
+DATABASE_URL="postgres://admin:password@mydb.123456.us-east-1.rds.amazonaws.com:5432/oforum?sslmode=require"
+```
+
+```bash DigitalOcean Managed Database
+DATABASE_URL="postgres://doadmin:pass@db-postgresql-nyc3-12345.ondigitalocean.com:25060/oforum?sslmode=require"
+```
+
+</CodeGroup>
+
+### SSL mode options
+
+The `sslmode` parameter controls SSL/TLS connection security:
+
+| Mode | Description | Use case |
+|------|-------------|----------|
+| `disable` | No SSL | Local development, private networks |
+| `require` | SSL required, no certificate validation | Production with managed databases |
+| `verify-ca` | Verify server certificate against CA | High security environments |
+| `verify-full` | Verify certificate and hostname | Maximum security |
+
+<Warning>
+  Always use `sslmode=require` (or stricter) in production with external databases. Use `sslmode=disable` only for local development.
+</Warning>
+
+### Connection pooling
+
+oForum handles connection pooling automatically. You can tune it with these parameters:
+
+```bash
+DATABASE_URL="postgres://user:pass@host:5432/oforum?pool_max_conns=20&pool_min_conns=5"
+```
+
+**Common pool parameters:**
+
+- `pool_max_conns`: Maximum connections (default: automatically determined)
+- `pool_min_conns`: Minimum idle connections (default: 0)
+- `pool_max_conn_lifetime`: Max connection age in seconds
+- `pool_max_conn_idle_time`: Max idle time before closing
+
+### Handling special characters
+
+If your password contains special characters, URL-encode them:
+
+| Character | Encoded |
+|-----------|----------|
+| `@` | `%40` |
+| `:` | `%3A` |
+| `/` | `%2F` |
+| `?` | `%3F` |
+| `#` | `%23` |
+| `&` | `%26` |
+
+**Example:**
+
+```bash
+# Password: my@pass:word
+DATABASE_URL="postgres://user:my%40pass%3Aword@host:5432/oforum"
+```
+
+### Testing your connection
+
+Verify your `DATABASE_URL` works:
+
+```bash
+psql "$DATABASE_URL" -c "SELECT version();"
+```
+
+Or using oForum:
+
+```bash
+oforum migrate
+```
+
+If migrations succeed, your connection is valid.
+
+## PORT
+
+<Note>
+  **Optional** - Defaults to `8080` if not set.
+</Note>
+
+The HTTP port oForum listens on:
+
+```bash
+PORT=8080
+```
+
+### Examples
+
+<CodeGroup>
+
+```bash Default (8080)
+oforum
+```
+
+```bash Custom port
+PORT=3000 oforum
+```
+
+```bash Fly.io (automatic)
+# Fly.io sets PORT automatically
+# Don't override unless you know what you're doing
+```
+
+```bash Docker
+docker run -p 3000:3000 -e PORT=3000 oforum
+```
+
+</CodeGroup>
+
+<Warning>
+  If you change `PORT`, update your reverse proxy configuration and Docker port mappings accordingly.
+</Warning>
+
+### Port selection guidelines
+
+- **8080**: Standard alternative HTTP port (default)
+- **3000**: Common for Node.js apps
+- **4000**: Another common alternative
+- **80**: Requires root, use reverse proxy instead
+- **443**: HTTPS, requires root and SSL setup - use reverse proxy
+
+## Environment file (.env)
+
+Store environment variables in a `.env` file:
+
+```bash .env
+DATABASE_URL=postgres://oforum:password@localhost:5432/oforum?sslmode=disable
+PORT=8080
+```
+
+oForum automatically loads `.env` from the current working directory.
+
+### Creating .env interactively
+
+```bash
+oforum init
+```
+
+This generates a `.env` file with prompts for each variable.
+
+### Security best practices
+
+<Steps>
+  <Step title="Restrict file permissions">
+    ```bash
+    chmod 600 .env
+    ```
+
+    Only the owner can read/write.
+  </Step>
+  
+  <Step title="Never commit to version control">
+    Add to `.gitignore`:
+
+    ```gitignore .gitignore
+    .env
+    .env.local
+    .env.*.local
+    ```
+  </Step>
+  
+  <Step title="Use secrets management in production">
+    Instead of `.env` files, use:
+
+    - **Docker**: `docker secret` or `--env-file`
+    - **Kubernetes**: ConfigMaps and Secrets
+    - **Fly.io**: `fly secrets set`
+    - **systemd**: `EnvironmentFile` with restricted permissions
+  </Step>
+</Steps>
+
+## Platform-specific configuration
+
+### Docker
+
+Pass variables directly:
+
+```bash
+docker run -p 8080:8080 \
+  -e DATABASE_URL="postgres://..." \
+  -e PORT=8080 \
+  oforum
+```
+
+Or use an environment file:
+
+```bash
+docker run --env-file .env -p 8080:8080 oforum
+```
+
+### Docker Compose
+
+```yaml docker-compose.yml
+services:
+  oforum:
+    image: oforum
+    environment:
+      DATABASE_URL: postgres://oforum:pass@postgres:5432/oforum?sslmode=disable
+      PORT: 8080
+    # Or use env_file:
+    # env_file:
+    #   - .env
+```
+
+### Fly.io
+
+Use secrets for sensitive data:
+
+```bash
+fly secrets set DATABASE_URL="postgres://..."
+```
+
+Use `fly.toml` for non-sensitive config:
+
+```toml fly.toml
+[env]
+  PORT = "8080"
+```
+
+### systemd
+
+Reference `.env` in your service file:
+
+```ini /etc/systemd/system/oforum.service
+[Service]
+EnvironmentFile=/etc/oforum/.env
+ExecStart=/usr/local/bin/oforum
+```
+
+Or set variables inline:
+
+```ini
+[Service]
+Environment="DATABASE_URL=postgres://..."
+Environment="PORT=8080"
+ExecStart=/usr/local/bin/oforum
+```
+
+## Verifying configuration
+
+Check what oForum sees:
+
+```bash
+# Print DATABASE_URL (sanitized)
+oforum migrate --dry-run
+
+# Check PORT
+ss -tlnp | grep oforum
+```
+
+## Troubleshooting
+
+### DATABASE_URL not set
+
+Error:
+```
+✗ DATABASE_URL is required
+```
+
+**Solution:**
+```bash
+oforum init  # Generate .env interactively
+```
+
+Or set it manually:
+```bash
+export DATABASE_URL="postgres://localhost:5432/oforum?sslmode=disable"
+```
+
+### Invalid DATABASE_URL format
+
+Error:
+```
+✗ Failed to connect: invalid connection string
+```
+
+**Check:**
+- URL starts with `postgres://` (not `postgresql://` - though both work)
+- No spaces in the URL
+- Special characters in password are URL-encoded
+- Port is included: `host:5432`
+
+### Connection refused
+
+Error:
+```
+✗ Failed to connect: connection refused
+```
+
+**Check:**
+- PostgreSQL is running: `sudo systemctl status postgresql`
+- Host and port are correct
+- Firewall allows connections
+- PostgreSQL listens on the correct interface (`listen_addresses` in postgresql.conf)
+
+### SSL errors
+
+Error:
+```
+✗ Failed to connect: SSL is not enabled on the server
+```
+
+**Solution:**
+
+For local/private networks:
+```bash
+DATABASE_URL="postgres://user:pass@host:5432/oforum?sslmode=disable"
+```
+
+For production, enable SSL on PostgreSQL or use a provider that supports it.
+
+### Port already in use
+
+Error:
+```
+✗ Failed to start server: address already in use
+```
+
+**Solution:**
+```bash
+PORT=3000 oforum  # Use different port
+```
+
+Or stop the conflicting service:
+```bash
+sudo lsof -i :8080  # Find what's using the port
+```
+
+## Next steps
+
+- [Docker deployment](/self-hosting/docker)
+- [Fly.io deployment](/self-hosting/fly-io)
+- [Manual deployment](/self-hosting/manual)

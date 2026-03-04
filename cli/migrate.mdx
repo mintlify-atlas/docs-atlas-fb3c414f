@@ -1,0 +1,249 @@
+---
+title: migrate
+description: Run database migrations
+---
+
+The `migrate` command applies pending database schema migrations. Migrations are embedded in the oForum binary and run automatically on server startup.
+
+## Usage
+
+```bash
+oforum migrate
+```
+
+<Note>
+  You typically don't need to run this command manually. The `serve` command automatically runs migrations on startup. Use `migrate` when you want to apply migrations without starting the server.
+</Note>
+
+## How It Works
+
+1. **Load migrations** - Reads embedded SQL files from the binary
+2. **Connect to database** - Establishes PostgreSQL connection
+3. **Check status** - Determines which migrations have already been applied
+4. **Apply pending** - Runs new migrations in order
+5. **Update schema** - Records applied migrations in `schema_migrations` table
+
+## Environment Variables
+
+<ParamField path="DATABASE_URL" type="string" required>
+  PostgreSQL connection string.
+  
+  ```bash
+  DATABASE_URL=postgres://localhost:5432/oforum?sslmode=disable
+  ```
+</ParamField>
+
+## Output
+
+### Success (New Migrations)
+
+```bash
+oforum migrate
+```
+
+Output:
+```
+⟳ Running migrations...
+✓ Migrations applied
+```
+
+### Success (Already Up to Date)
+
+```bash
+oforum migrate
+```
+
+Output:
+```
+⟳ Running migrations...
+✓ Already up to date
+```
+
+### Error (Database Unreachable)
+
+```
+⟳ Running migrations...
+✗ Failed to connect: connection refused
+```
+
+### Error (Migration Failed)
+
+```
+⟳ Running migrations...
+✗ Migration failed: syntax error at or near "CREAT"
+```
+
+## Embedded Migrations
+
+oForum uses embedded migrations compiled into the binary. The migration files are located in the `migrations/` directory of the source repository:
+
+```
+migrations/
+├── 000001_initial.up.sql
+├── 000001_initial.down.sql
+├── 000002_add_roles.up.sql
+├── 000002_add_roles.down.sql
+└── ...
+```
+
+### Migration Naming
+
+Migrations follow the pattern:
+```
+{version}_{description}.{direction}.sql
+```
+
+- `version` - Sequential number (e.g., `000001`, `000002`)
+- `description` - Brief name (e.g., `initial`, `add_roles`)
+- `direction` - Either `up` or `down`
+
+<Note>
+  Migrations are embedded at build time. You cannot add new migrations without rebuilding the binary.
+</Note>
+
+## Migration Status
+
+Migration state is tracked in the `schema_migrations` table:
+
+```sql
+SELECT * FROM schema_migrations;
+```
+
+Output:
+```
+ version | dirty
+---------+-------
+       2 | f
+```
+
+- `version` - Current migration version
+- `dirty` - Whether the last migration failed mid-execution
+
+## Troubleshooting
+
+### Migration Failed Mid-Execution
+
+If a migration fails partway through, the database may be in a "dirty" state:
+
+```
+✗ Migration failed: Dirty database version 2. Fix and force version.
+```
+
+**Solution:** Manually fix the database and reset the migration state:
+
+```sql
+-- Inspect what was applied
+\d
+
+-- Manually fix the schema
+-- ...
+
+-- Mark migration as clean
+UPDATE schema_migrations SET dirty = false WHERE version = 2;
+```
+
+Then retry:
+```bash
+oforum migrate
+```
+
+### Migration Version Conflict
+
+If you downgrade to an older binary with fewer migrations:
+
+```
+✗ Migration failed: version is ahead of binary
+```
+
+**Solution:** Upgrade to the latest binary or manually downgrade the schema.
+
+### Cannot Connect to Database
+
+```
+✗ Failed to create migrator: connection refused
+```
+
+**Solution:** Verify PostgreSQL is running and `DATABASE_URL` is correct:
+
+```bash
+psql "$DATABASE_URL"
+```
+
+## Rollback
+
+<Warning>
+  oForum does not support automatic rollback. Downward migrations (`.down.sql` files) are included in the source code but not executed by the CLI.
+</Warning>
+
+To roll back a migration:
+
+1. **Manually run the down migration**:
+   ```sql
+   -- Execute SQL from migrations/XXXXXX_name.down.sql
+   ```
+
+2. **Update schema_migrations table**:
+   ```sql
+   DELETE FROM schema_migrations WHERE version = X;
+   INSERT INTO schema_migrations (version, dirty) VALUES (X-1, false);
+   ```
+
+## Migration Safety
+
+Migrations are designed to be safe for production:
+
+- **Idempotent** - Safe to run multiple times
+- **Atomic** - Each migration runs in a transaction
+- **Ordered** - Applied sequentially by version number
+- **Tracked** - State stored in `schema_migrations`
+
+<Note>
+  Some operations (like `DROP COLUMN`) cannot be rolled back. Always test migrations on a staging database first.
+</Note>
+
+## Examples
+
+### Initial Setup
+
+First migration creates tables:
+
+```bash
+oforum migrate
+```
+
+Output:
+```
+⟳ Running migrations...
+✓ Migrations applied
+```
+
+Verify:
+```sql
+\dt
+```
+
+### Upgrade After Update
+
+After updating oForum:
+
+```bash
+oforum update
+oforum migrate
+```
+
+### CI/CD Pipeline
+
+Run migrations before deploying:
+
+```yaml
+steps:
+  - name: Run migrations
+    run: |
+      export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+      oforum migrate
+```
+
+## Related Commands
+
+- [serve](/cli/serve) - Runs migrations automatically on startup
+- [seed](/cli/seed) - Runs migrations before seeding data

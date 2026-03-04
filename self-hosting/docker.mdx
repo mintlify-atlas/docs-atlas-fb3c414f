@@ -1,0 +1,297 @@
+---
+title: Docker deployment
+description: Deploy oForum using Docker with PostgreSQL for a containerized, reproducible setup
+---
+
+Deploy oForum with Docker for a consistent, isolated environment that works across any platform.
+
+## Quick start
+
+The fastest way to run oForum with Docker:
+
+```bash
+docker build -t oforum .
+docker run -p 8080:8080 -e DATABASE_URL="postgres://user:pass@host:5432/oforum" oforum
+```
+
+Open [http://localhost:8080](http://localhost:8080) to see your forum.
+
+## Understanding the Dockerfile
+
+oForum uses a multi-stage build for a minimal production image:
+
+```dockerfile ~/workspace/source/Dockerfile
+FROM golang:1.25-alpine AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o oforum .
+RUN CGO_ENABLED=0 GOOS=linux go build -o seed-prod ./cmd/seed-prod
+RUN CGO_ENABLED=0 GOOS=linux go build -o migrate-slugs ./cmd/migrate-slugs
+
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates
+WORKDIR /app
+COPY --from=builder /app/oforum .
+COPY --from=builder /app/seed-prod .
+COPY --from=builder /app/migrate-slugs .
+
+ENV GIN_MODE=release
+EXPOSE 8080
+CMD ["./oforum"]
+```
+
+**What this does:**
+
+1. **Builder stage**: Compiles the Go binary with all dependencies
+2. **Final stage**: Creates a minimal Alpine image (~10MB) with just the binary
+3. **Result**: Small, secure container with no build tools or source code
+
+## Docker Compose with PostgreSQL
+
+For a complete setup including the database, use Docker Compose:
+
+<Steps>
+  <Step title="Create docker-compose.yml">
+    Create a `docker-compose.yml` file in your project directory:
+
+    ```yaml docker-compose.yml
+    version: '3.8'
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        environment:
+          POSTGRES_USER: oforum
+          POSTGRES_PASSWORD: changeme
+          POSTGRES_DB: oforum
+        volumes:
+          - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+          test: ["CMD-SHELL", "pg_isready -U oforum"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+
+      oforum:
+        build: .
+        ports:
+          - "8080:8080"
+        environment:
+          DATABASE_URL: postgres://oforum:changeme@postgres:5432/oforum?sslmode=disable
+          PORT: 8080
+        depends_on:
+          postgres:
+            condition: service_healthy
+        restart: unless-stopped
+
+    volumes:
+      postgres_data:
+    ```
+  </Step>
+  
+  <Step title="Start the services">
+    Launch both oForum and PostgreSQL:
+
+    ```bash
+    docker-compose up -d
+    ```
+
+    This will:
+    - Pull the PostgreSQL image
+    - Build the oForum image
+    - Start both containers
+    - Run migrations automatically
+  </Step>
+  
+  <Step title="Verify it's running">
+    Check the logs:
+
+    ```bash
+    docker-compose logs -f oforum
+    ```
+
+    You should see:
+    ```
+    Migrations applied successfully
+    Starting server on :8080
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Change the default PostgreSQL password in production! Update both `POSTGRES_PASSWORD` and the password in `DATABASE_URL`.
+</Warning>
+
+## Environment variables
+
+Pass environment variables to the container using the `-e` flag or in `docker-compose.yml`:
+
+```bash
+docker run -p 8080:8080 \
+  -e DATABASE_URL="postgres://user:pass@host:5432/oforum" \
+  -e PORT=8080 \
+  oforum
+```
+
+Or use an environment file:
+
+```bash .env
+DATABASE_URL=postgres://oforum:changeme@postgres:5432/oforum?sslmode=disable
+PORT=8080
+```
+
+```bash
+docker run --env-file .env -p 8080:8080 oforum
+```
+
+See the [environment variables reference](/self-hosting/environment) for all available options.
+
+## Data persistence
+
+To persist data across container restarts, mount a volume for PostgreSQL:
+
+```bash
+docker volume create oforum_db
+
+docker run -d \
+  --name oforum-postgres \
+  -v oforum_db:/var/lib/postgresql/data \
+  -e POSTGRES_PASSWORD=changeme \
+  postgres:16-alpine
+```
+
+<Note>
+  The oForum container itself is stateless - all data lives in PostgreSQL. No volumes are needed for the oForum container.
+</Note>
+
+## Health checks and monitoring
+
+Add a health check to ensure your container is running properly:
+
+```yaml docker-compose.yml
+services:
+  oforum:
+    build: .
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+Check container health:
+
+```bash
+docker ps
+```
+
+View resource usage:
+
+```bash
+docker stats oforum
+```
+
+## Using pre-built images
+
+If you don't want to build from source, you can use pre-built binaries in a simpler Dockerfile:
+
+```dockerfile Dockerfile.prebuilt
+FROM alpine:3.20
+
+RUN apk add --no-cache ca-certificates curl && \
+    curl -fsSL https://raw.githubusercontent.com/arcten/oforum/main/install.sh | sh
+
+EXPOSE 8080
+CMD ["oforum"]
+```
+
+## Updating oForum
+
+To update your Docker deployment:
+
+<Steps>
+  <Step title="Pull the latest code">
+    ```bash
+    git pull origin main
+    ```
+  </Step>
+  
+  <Step title="Rebuild the image">
+    ```bash
+    docker-compose build oforum
+    ```
+  </Step>
+  
+  <Step title="Restart the service">
+    ```bash
+    docker-compose up -d oforum
+    ```
+  </Step>
+</Steps>
+
+Migrations run automatically on startup, so your database schema will update automatically.
+
+## Production considerations
+
+For production deployments:
+
+1. **Use SSL**: Put oForum behind a reverse proxy (nginx, Caddy) with SSL termination
+2. **Resource limits**: Set memory and CPU limits in docker-compose.yml
+3. **Logging**: Configure log rotation with Docker's logging drivers
+4. **Backups**: Regularly backup the PostgreSQL volume
+5. **Secrets**: Use Docker secrets or environment files (never commit credentials)
+
+```yaml docker-compose.yml
+services:
+  oforum:
+    build: .
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+```
+
+## Troubleshooting
+
+### Container won't start
+
+Check the logs:
+```bash
+docker-compose logs oforum
+```
+
+### Database connection failed
+
+Verify the PostgreSQL container is healthy:
+```bash
+docker-compose ps
+```
+
+Test the connection:
+```bash
+docker-compose exec postgres psql -U oforum -d oforum -c "SELECT 1;"
+```
+
+### Port already in use
+
+Change the port mapping in docker-compose.yml:
+```yaml
+ports:
+  - "3000:8080"  # Access on port 3000 instead
+```
+
+## Next steps
+
+- [Environment variables reference](/self-hosting/environment)
+- [Manual deployment guide](/self-hosting/manual)
+- Set up a reverse proxy for SSL/TLS

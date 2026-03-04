@@ -1,0 +1,457 @@
+---
+title: Database
+description: Learn oForum's database architecture, migrations, and query patterns
+---
+
+## Database Architecture
+
+oForum uses **plain SQL** with no ORM. All queries are handwritten and live in `internal/db/`.
+
+### Why No ORM?
+
+<CardGroup cols={2}>
+  <Card title="Performance" icon="gauge-high">
+    Direct SQL queries are faster and more predictable than ORM abstractions
+  </Card>
+  <Card title="Clarity" icon="eye">
+    You see exactly what queries run — no hidden N+1 problems
+  </Card>
+  <Card title="Control" icon="sliders">
+    Full control over indexes, joins, and query optimization
+  </Card>
+  <Card title="Simplicity" icon="cube">
+    One less abstraction layer to learn and debug
+  </Card>
+</CardGroup>
+
+## Connection Pool
+
+The database connection is managed by pgx's connection pool:
+
+```go db/db.go:10-25
+var Pool *pgxpool.Pool
+
+func Connect(databaseURL string) error {
+    var err error
+    Pool, err = pgxpool.New(context.Background(), databaseURL)
+    if err != nil {
+        return fmt.Errorf("unable to connect to database: %w", err)
+    }
+    return Pool.Ping(context.Background())
+}
+
+func Close() {
+    if Pool != nil {
+        Pool.Close()
+    }
+}
+```
+
+<Note>
+The `Pool` variable is a global singleton, initialized once at startup and shared across all requests.
+</Note>
+
+## Schema Overview
+
+Core tables from `internal/models/models.go`:
+
+### Users
+
+```go models.go:5-17
+type User struct {
+    ID           int        `json:"id"`
+    Username     string     `json:"username"`
+    PasswordHash string     `json:"-"`
+    DisplayName  string     `json:"display_name"`
+    Bio          string     `json:"bio"`
+    About        string     `json:"about"`
+    Email        string     `json:"email"`
+    IsAdmin      bool       `json:"is_admin"`
+    BannedUntil  *time.Time `json:"banned_until"`
+    CreatedAt    time.Time  `json:"created_at"`
+    Roles        []Role     `json:"-"`
+}
+```
+
+### Posts
+
+```go models.go:61-77
+type Post struct {
+    ID            int       `json:"id"`
+    UserID        int       `json:"user_id"`
+    Title         string    `json:"title"`
+    Slug          string    `json:"slug"`
+    Body          string    `json:"body"`
+    URL           *string   `json:"url"`
+    CreatedAt     time.Time `json:"created_at"`
+    Username      string    `json:"username"`
+    Points        int       `json:"points"`
+    CommentCount  int       `json:"comment_count"`
+    Upvoted       bool      `json:"-"`
+    Tags          []Tag     `json:"-"`
+}
+```
+
+### Comments
+
+```go models.go:79-95
+type Comment struct {
+    ID            int        `json:"id"`
+    PostID        int        `json:"post_id"`
+    UserID        int        `json:"user_id"`
+    ParentID      *int       `json:"parent_id"`
+    Body          string     `json:"body"`
+    CreatedAt     time.Time  `json:"created_at"`
+    Username      string     `json:"username"`
+    Points        int        `json:"points"`
+    Children      []*Comment `json:"-"`
+    Upvoted       bool       `json:"-"`
+    Depth         int        `json:"-"`
+}
+```
+
+### Other Tables
+
+- **sessions** — Session tokens for authentication
+- **upvotes** — Post and comment upvotes (unique per user)
+- **roles** — User roles with colors and permissions
+- **user_roles** — Many-to-many join table
+- **tags** — Post categorization tags
+- **post_tags** — Many-to-many join table
+- **forum_settings** — Global forum configuration
+
+## Query Patterns
+
+### Simple CRUD
+
+```go db/users.go:10-23
+func CreateUser(ctx context.Context, username, passwordHash string) (*models.User, error) {
+    user := &models.User{}
+    err := Pool.QueryRow(ctx,
+        `INSERT INTO users (username, password_hash) VALUES ($1, $2)
+         RETURNING id, username, password_hash, display_name, bio, about, email, is_admin, banned_until, created_at`,
+        username, passwordHash,
+    ).Scan(&user.ID, &user.Username, &user.PasswordHash,
+        &user.DisplayName, &user.Bio, &user.About, &user.Email,
+        &user.IsAdmin, &user.BannedUntil, &user.CreatedAt)
+    if err != nil {
+        return nil, err
+    }
+    return user, nil
+}
+```
+
+<Note>
+Always use `ctx context.Context` for cancellation and timeouts. All queries accept context as the first parameter.
+</Note>
+
+### Joins with Aggregates
+
+```go db/posts.go:81-103
+func GetPost(ctx context.Context, postID int, currentUserID *int) (*models.Post, error) {
+    query := `
+        SELECT p.id, p.user_id, p.title, p.slug, p.body, p.url, p.created_at,
+               u.username, u.created_at,
+               COALESCE((SELECT COUNT(*) FROM upvotes WHERE post_id = p.id), 0) as points,
+               COALESCE((SELECT COUNT(*) FROM comments WHERE post_id = p.id), 0) as comment_count,
+               CASE WHEN $2::int IS NOT NULL THEN
+                   EXISTS(SELECT 1 FROM upvotes WHERE post_id = p.id AND user_id = $2)
+               ELSE false END as upvoted
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE p.id = $1`
+    
+    // ... scan into post struct
+}
+```
+
+**Key patterns:**
+- Use `COALESCE` for nullable aggregates
+- Use `EXISTS` for boolean checks (faster than `COUNT(*) > 0`)
+- Conditional logic with `CASE WHEN` for per-user data
+
+### Listing with Filtering
+
+```go db/posts.go:196-233
+func getFilteredPosts(ctx context.Context, f PostFilter) ([]models.Post, error) {
+    where, args, argN := buildWhereArgs(f)
+    
+    query := `
+        SELECT p.id, p.user_id, p.title, p.slug, p.body, p.url, p.created_at,
+               u.username, u.created_at,
+               COALESCE((SELECT COUNT(*) FROM upvotes WHERE post_id = p.id), 0) as points,
+               COALESCE((SELECT COUNT(*) FROM comments WHERE post_id = p.id), 0) as comment_count,
+               CASE WHEN $1::int IS NOT NULL THEN
+                   EXISTS(SELECT 1 FROM upvotes WHERE post_id = p.id AND user_id = $1)
+               ELSE false END as upvoted
+        FROM posts p
+        JOIN users u ON p.user_id = u.id` +
+        where + ` ORDER BY p.created_at DESC LIMIT $` + itoa(argN) + ` OFFSET $` + itoa(argN+1)
+    
+    args = append(args, f.Limit, f.Offset)
+    rows, err := Pool.Query(ctx, query, args...)
+    // ... iterate rows
+}
+```
+
+**Dynamic query building:**
+- Build WHERE clauses conditionally based on filters
+- Use numbered parameters (`$1`, `$2`, etc.)
+- Always use parameterized queries (prevents SQL injection)
+
+### Tree Structures
+
+Comments are stored flat with `parent_id`, then built into a tree:
+
+```go db/comments.go:94-112
+func buildCommentTree(comments []*models.Comment) []*models.Comment {
+    byID := make(map[int]*models.Comment)
+    for _, c := range comments {
+        c.Children = []*models.Comment{}
+        byID[c.ID] = c
+    }
+    
+    var roots []*models.Comment
+    for _, c := range comments {
+        if c.ParentID == nil {
+            c.Depth = 0
+            roots = append(roots, c)
+        } else if parent, ok := byID[*c.ParentID]; ok {
+            c.Depth = parent.Depth + 1
+            parent.Children = append(parent.Children, c)
+        }
+    }
+    return roots
+}
+```
+
+**Why this approach?**
+- ✅ One query to fetch all comments (no N+1)
+- ✅ Simple schema (just `parent_id`)
+- ✅ Fast in-memory tree building
+
+## Migration System
+
+Migrations are **embedded** into the binary and run automatically on startup.
+
+### Migration Files
+
+Migrations live in `migrations/` as numbered pairs:
+
+```
+migrations/
+├── 001_create_users.up.sql
+├── 001_create_users.down.sql
+├── 002_create_sessions.up.sql
+├── 002_create_sessions.down.sql
+├── 003_create_posts.up.sql
+├── 003_create_posts.down.sql
+└── ...
+```
+
+### Example Migration
+
+<CodeGroup>
+```sql migrations/001_create_users.up.sql
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(64) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_users_username ON users(username);
+```
+
+```sql migrations/001_create_users.down.sql
+DROP TABLE IF EXISTS users CASCADE;
+```
+</CodeGroup>
+
+### How Migrations Run
+
+```go main.go:420-432
+func runMigrations(databaseURL string) {
+    d, err := iofs.New(migrationsFS, "migrations")
+    if err != nil {
+        log.Fatalf("Failed to load migrations: %v", err)
+    }
+    m, err := migrate.NewWithSourceInstance("iofs", d, databaseURL)
+    if err != nil {
+        log.Fatalf("Failed to create migrator: %v", err)
+    }
+    if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+        log.Fatalf("Migration failed: %v", err)
+    }
+    log.Println("Migrations applied successfully")
+}
+```
+
+<Note>
+Migrations run on **every startup**. If already applied, they're skipped (idempotent).
+</Note>
+
+## Creating New Migrations
+
+<Steps>
+  <Step title="Find Next Number">
+    Check `migrations/` directory for the highest number:
+    ```bash
+    ls migrations/
+    # Last is 012, so create 013
+    ```
+  </Step>
+  
+  <Step title="Create Up Migration">
+    Create `migrations/013_your_change.up.sql`:
+    ```sql
+    ALTER TABLE users ADD COLUMN location VARCHAR(100) DEFAULT '';
+    ```
+  </Step>
+  
+  <Step title="Create Down Migration">
+    Create `migrations/013_your_change.down.sql`:
+    ```sql
+    ALTER TABLE users DROP COLUMN location;
+    ```
+  </Step>
+  
+  <Step title="Test Migration">
+    Restart the server — migration runs automatically:
+    ```bash
+    go run main.go
+    # Output: Migrations applied successfully
+    ```
+  </Step>
+  
+  <Step title="Update Model">
+    Add field to `internal/models/models.go`:
+    ```go
+    type User struct {
+        // ... existing fields
+        Location string `json:"location"`
+    }
+    ```
+  </Step>
+</Steps>
+
+## Best Practices
+
+### Always Use Context
+
+```go
+// ❌ Bad
+func GetUser(id int) (*User, error) {
+    return Pool.QueryRow(...)
+}
+
+// ✅ Good
+func GetUser(ctx context.Context, id int) (*User, error) {
+    return Pool.QueryRow(ctx, ...)
+}
+```
+
+### Use Parameterized Queries
+
+```go
+// ❌ Bad (SQL injection risk)
+query := fmt.Sprintf("SELECT * FROM users WHERE username = '%s'", username)
+
+// ✅ Good
+query := "SELECT * FROM users WHERE username = $1"
+Pool.QueryRow(ctx, query, username)
+```
+
+### Handle Nullable Fields
+
+```go
+type Post struct {
+    URL *string `json:"url"` // Pointer for nullable
+}
+
+// When inserting
+var url *string
+if urlInput != "" {
+    url = &urlInput
+}
+```
+
+### Avoid N+1 Queries
+
+```go
+// ❌ Bad (N+1 problem)
+for _, post := range posts {
+    tags, _ := db.GetTagsForPost(ctx, post.ID) // Query per post
+    post.Tags = tags
+}
+
+// ✅ Good (bulk load)
+postIDs := getPostIDs(posts)
+tagsByPostID, _ := db.GetTagsForPosts(ctx, postIDs) // One query
+for i := range posts {
+    posts[i].Tags = tagsByPostID[posts[i].ID]
+}
+```
+
+See `db/roles.go:GetRolesForUsers()` for a real example.
+
+### Index Strategically
+
+```sql
+-- Index foreign keys
+CREATE INDEX idx_posts_user_id ON posts(user_id);
+
+-- Index sort columns
+CREATE INDEX idx_posts_created_at ON posts(created_at DESC);
+
+-- Composite indexes for common queries
+CREATE INDEX idx_upvotes_post_user ON upvotes(post_id, user_id);
+```
+
+## Database Debugging
+
+### Enable Query Logging
+
+Add to PostgreSQL config (`postgresql.conf`):
+
+```ini
+log_statement = 'all'
+log_duration = on
+```
+
+### Analyze Query Performance
+
+```sql
+EXPLAIN ANALYZE
+SELECT p.*, COUNT(c.id) as comment_count
+FROM posts p
+LEFT JOIN comments c ON c.post_id = p.id
+GROUP BY p.id
+ORDER BY p.created_at DESC
+LIMIT 20;
+```
+
+### Common Issues
+
+**Slow queries:**
+- Add missing indexes
+- Use `EXPLAIN ANALYZE` to find bottlenecks
+- Consider pagination limits
+
+**Connection pool exhausted:**
+- Check for leaked connections (always `defer rows.Close()`)
+- Increase pool size in `DATABASE_URL`:
+  ```
+  postgres://...?pool_max_conns=20
+  ```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Templates" icon="file-code" href="/development/templates">
+    Learn how to display database data in templates
+  </Card>
+  <Card title="Authentication" icon="lock" href="/development/authentication">
+    Understand session storage and security
+  </Card>
+</CardGroup>

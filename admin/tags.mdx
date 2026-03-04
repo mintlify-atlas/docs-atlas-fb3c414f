@@ -1,0 +1,265 @@
+---
+title: 'Tag Management'
+description: 'Create and organize tags for post categorization'
+---
+
+Tags help organize forum content by topic or category. Create tags to enable filtering, improve discoverability, and help users find relevant discussions.
+
+## Creating Tags
+
+Set up tags for categorizing posts by topic:
+
+<Steps>
+  <Step title="Access tag management">
+    Navigate to `/admin/tags` in the admin panel.
+  </Step>
+  
+  <Step title="Enter tag details">
+    Provide the following information:
+    
+    - **Name**: Tag identifier (e.g., "General", "Support", "Feature Request")
+    - **Sort order**: Numeric priority for display ordering
+  </Step>
+  
+  <Step title="Create tag">
+    Click the create button. The tag becomes immediately available for use on posts.
+  </Step>
+</Steps>
+
+## Tag Properties
+
+Tags have two configurable properties:
+
+<ParamField path="name" type="string" required>
+  The tag's display name, shown as a badge on posts and in filter interfaces.
+  
+  Guidelines:
+  - Use clear, descriptive names
+  - Keep names concise (1-3 words)
+  - Use title case
+  - Avoid abbreviations unless widely understood
+  
+  Examples: "Bug Report", "Feature Request", "General Discussion", "Tutorial", "Announcement"
+</ParamField>
+
+<ParamField path="sort_order" type="integer" default="0">
+  Numeric value determining display order in tag lists and dropdowns. Lower numbers appear first.
+  
+  Recommended ordering:
+  - `0-10`: Primary categories (General, Announcements)
+  - `11-50`: Common topics (Support, Feature Requests, Bug Reports)
+  - `51-100`: Specialized topics (specific technical areas)
+  - `101+`: Archived or deprecated tags
+</ParamField>
+
+## Assigning Tags to Posts
+
+Users assign tags when creating or editing posts. Tags help categorize content for easier navigation.
+
+### During Post Creation
+
+When creating a post, users can select from available tags:
+
+```
+1. Select tags from dropdown menu
+2. Choose up to max_tags_per_post tags (configurable in settings)
+3. Tags display as badges on the post
+```
+
+### Tag Limit
+
+The `max_tags_per_post` setting controls how many tags can be assigned to a single post. Default: 3 tags.
+
+This limit prevents:
+- Tag spam
+- Over-categorization
+- Diluted tag effectiveness
+
+<Note>
+  Configure the tag limit in [Forum Settings](/admin/settings) under the `max_tags_per_post` option.
+</Note>
+
+## Tag-Based Filtering
+
+Tags enable content filtering throughout the forum:
+
+### Post Listings
+
+Users can filter posts by tag to view only content in specific categories:
+
+```
+/posts?tag=feature-request → Shows only posts tagged "Feature Request"
+```
+
+### Multi-Tag Filtering
+
+The system supports viewing all posts with a specific tag through the tag filter interface:
+
+- Click any tag badge to filter by that tag
+- Tag filters apply to the post listing
+- Clear filters to return to full listing
+
+### Tag Pages
+
+Each tag has a dedicated page showing all associated posts:
+
+- Chronological ordering (newest first)
+- Pagination for large tag collections
+- Tag statistics (post count)
+
+## Tag Management
+
+Administrators can modify and organize tags through the tag management interface.
+
+### Editing Tags
+
+Update existing tags to refine categorization:
+
+<Steps>
+  <Step title="Locate tag">
+    Find the tag in the tag list at `/admin/tags`.
+  </Step>
+  
+  <Step title="Modify properties">
+    Update the tag name or sort order:
+    
+    - **Name changes**: Affect all posts with this tag
+    - **Sort order changes**: Reorder tag display throughout forum
+  </Step>
+  
+  <Step title="Save changes">
+    Click the update button. Changes apply immediately across the forum.
+  </Step>
+</Steps>
+
+<Warning>
+  Renaming a tag updates it on all existing posts. This is useful for standardizing terminology but affects all historical content.
+</Warning>
+
+### Deleting Tags
+
+Remove tags that are no longer needed:
+
+<Steps>
+  <Step title="Select tag">
+    Find the tag you want to delete in the tag list.
+  </Step>
+  
+  <Step title="Click delete">
+    Click the delete button next to the tag.
+  </Step>
+  
+  <Step title="Confirm deletion">
+    The tag is removed from all posts and deleted from the system.
+  </Step>
+</Steps>
+
+<Warning>
+  Deleting a tag:
+  - Removes it from all posts immediately
+  - Cannot be undone
+  - Does not delete the posts (only removes the tag association)
+  - May orphan content if it was the only categorization method
+</Warning>
+
+### Bulk Operations
+
+The tag management interface displays all tags with their current usage:
+
+- **Tag name**: Current identifier
+- **Sort order**: Display priority
+- **Post count**: Number of posts using this tag (if displayed)
+- **Actions**: Edit and delete buttons
+
+## Best Practices for Tag Organization
+
+Follow these guidelines to create an effective tagging system:
+
+### Start Simple
+
+<Note>
+  Begin with 5-10 core tags covering your forum's main topics. Add more tags as your community grows and needs become clear.
+</Note>
+
+Core tags for most forums:
+- General/Discussion
+- Support/Help
+- Feature Request
+- Bug Report
+- Announcement
+
+### Naming Conventions
+
+**Do:**
+- Use clear, specific names ("Bug Report" not "Bugs")
+- Maintain consistent formatting (all title case or all lowercase)
+- Use standard terminology your community understands
+- Keep names concise but descriptive
+
+**Don't:**
+- Use vague names ("Misc", "Other", "Stuff")
+- Create overlapping categories ("Help" and "Support")
+- Use special characters or emojis
+- Include version numbers or dates in tag names
+
+### Tag Hierarchy
+
+Organize tags by importance and frequency:
+
+```
+High Priority (order 0-10):
+- General (0)
+- Announcements (5)
+
+Medium Priority (order 11-50):
+- Support (10)
+- Feature Request (15)
+- Bug Report (20)
+- Tutorial (25)
+
+Low Priority (order 51+):
+- Off-Topic (50)
+- Meta (55)
+```
+
+### Tag Consolidation
+
+Periodically review and consolidate tags:
+
+1. **Identify underused tags**: Tags with few posts
+2. **Merge similar tags**: "Help" + "Support" → "Support"
+3. **Update posts**: Manually retag or delete before removing
+4. **Archive old tags**: Delete tags for outdated topics
+
+### Tag Limits
+
+<Warning>
+  Setting appropriate tag limits prevents over-categorization:
+  
+  - **3 tags**: Recommended for most forums
+  - **1-2 tags**: Small forums with focused topics
+  - **5+ tags**: Large forums with complex categorization needs
+  
+  More tags per post doesn't necessarily improve organization.
+</Warning>
+
+### User Guidance
+
+Help users understand your tagging system:
+
+- Document tag purposes in forum guidelines
+- Use descriptive tag names that explain themselves
+- Monitor tag usage and correct misapplications
+- Consider creating tag descriptions (if implementing custom fields)
+
+### Maintenance Schedule
+
+Review tags regularly:
+
+- **Monthly**: Check for new tag needs based on post patterns
+- **Quarterly**: Consolidate underused tags
+- **Yearly**: Comprehensive tag system review and reorganization
+
+<Note>
+  A well-maintained tag system improves content discoverability without requiring constant user intervention. Focus on clarity and consistency over complexity.
+</Note>

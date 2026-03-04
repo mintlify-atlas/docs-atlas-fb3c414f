@@ -1,0 +1,179 @@
+---
+title: Comments
+description: Engage in discussions with threaded comments, replies, and upvoting
+---
+
+Comments power the discussion side of oForum. With support for threaded replies, upvoting, and link formatting, comments create engaging conversations around posts.
+
+## Adding Comments
+
+To participate in a discussion:
+
+<Steps>
+  <Step title="Navigate to a Post">
+    Open any post to see its comment section.
+  </Step>
+  
+  <Step title="Write Your Comment">
+    Find the comment textarea at the top of the discussion section.
+  </Step>
+  
+  <Step title="Format Your Text">
+    Use the link syntax `<https://example.com>` to add clickable links.
+  </Step>
+  
+  <Step title="Submit">
+    Click "submit" or press `Cmd/Ctrl + Enter` to post your comment.
+  </Step>
+</Steps>
+
+<Note>
+  You must be logged in to comment. Comments appear immediately after submission.
+</Note>
+
+## Threaded Replies
+
+oForum supports nested comment threads for organized discussions.
+
+### Replying to Comments
+
+<Steps>
+  <Step title="Find the Reply Link">
+    Click "reply" next to any comment you want to respond to.
+  </Step>
+  
+  <Step title="Write Your Reply">
+    A reply form will appear directly under the comment.
+  </Step>
+  
+  <Step title="Submit Your Reply">
+    Your reply will be nested under the parent comment, showing the conversation flow.
+  </Step>
+</Steps>
+
+### Comment Threading Structure
+
+Comments are displayed in a tree structure:
+- **Root comments**: Top-level comments appear on the left edge
+- **Replies**: Nested comments are indented 24 pixels per level
+- **Visual borders**: A left border shows the nesting hierarchy
+- **Depth tracking**: Each comment knows its depth in the thread
+
+<Tip>
+  Use the `[-]` button next to a comment to collapse its entire thread. This is helpful for navigating long discussions. Click `[+]` to expand it again.
+</Tip>
+
+## Comment Depth and Nesting
+
+oForum allows unlimited nesting depth for comment threads. The depth is calculated automatically:
+
+- **Depth 0**: Root comments (direct replies to the post)
+- **Depth 1**: Replies to root comments
+- **Depth 2+**: Replies to replies, and so on
+
+Each additional level is indented further to show the conversation hierarchy. While there's no hard limit on depth, very deep threads may become narrow on smaller screens.
+
+## Upvoting Comments
+
+Just like posts, you can upvote comments to highlight valuable contributions.
+
+<Steps>
+  <Step title="Find the Upvote Arrow">
+    Look for the triangle arrow next to the comment author's name.
+  </Step>
+  
+  <Step title="Click to Upvote">
+    The arrow will be highlighted when you've upvoted.
+  </Step>
+  
+  <Step title="Points Display">
+    The comment's point count updates immediately.
+  </Step>
+</Steps>
+
+Comment points contribute to the author's reputation score, which appears on their profile and the leaderboard.
+
+<Note>
+  Upvotes on comments are treated equally to post upvotes when calculating user reputation.
+</Note>
+
+## Editing and Deleting Comments
+
+### Deleting Your Comments
+
+You can delete comments you've written:
+
+<Steps>
+  <Step title="Locate Your Comment">
+    Find the comment you want to delete.
+  </Step>
+  
+  <Step title="Click Delete">
+    Look for the "delete" link in the comment metadata (it only appears on your own comments).
+  </Step>
+  
+  <Step title="Confirm Deletion">
+    Confirm when prompted. The comment will be permanently removed.
+  </Step>
+</Steps>
+
+<Warning>
+  - Deletion is permanent and cannot be undone
+  - If your comment has replies, those replies will also be deleted
+  - This removes the entire sub-thread under your comment
+</Warning>
+
+<Note>
+  oForum currently doesn't support editing comments after posting. Read through your comment before submitting, or delete and repost if you need to make corrections.
+</Note>
+
+## Link Formatting
+
+Comments support simple link formatting:
+
+```
+Check out this article: <https://example.com>
+Or this discussion: <https://forum.example/thread>
+```
+
+The angle bracket syntax automatically converts URLs into clickable links. This keeps formatting simple and consistent across the forum.
+
+<Tip>
+  Add context around your links so readers know what they're clicking on. Instead of just posting a URL, explain why it's relevant to the discussion.
+</Tip>
+
+## Markdown Support
+
+While oForum keeps formatting minimal, text is displayed with:
+
+- **Whitespace preservation**: Line breaks and spacing are maintained
+- **Pre-wrapped text**: Long lines wrap naturally
+- **Link detection**: URLs in angle brackets become clickable
+
+This approach keeps the interface clean while ensuring your formatting intentions are preserved.
+
+<Note>
+  Full markdown (bold, italic, headers, etc.) is not supported. The focus is on content over formatting complexity.
+</Note>
+
+## Comment Chronology
+
+Comments are displayed in chronological order:
+
+- **Sort order**: Oldest comments appear first (creation time ascending)
+- **Natural flow**: Conversations read like a timeline
+- **No re-sorting**: Unlike posts, comments don't get reordered based on votes
+
+This ensures discussions flow naturally and context is preserved, regardless of which comments receive more upvotes.
+
+## Keyboard Shortcuts
+
+Speed up your commenting with keyboard shortcuts:
+
+- **`Cmd/Ctrl + Enter`**: Submit the comment or reply you're currently writing
+- Works in any comment or reply textarea
+- Applies to both top-level comments and threaded replies
+
+<Tip>
+  After writing your comment, press `Cmd/Ctrl + Enter` to submit without reaching for the mouse.
+</Tip>

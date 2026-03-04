@@ -1,97 +1,285 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: oForum Documentation
+description: Minimal, fast, self-hostable forum inspired by Hacker News — one binary, one database
+mode: custom
 ---
 
-## Setting up
+<div className="relative overflow-hidden bg-gradient-to-br from-[#ff6600] via-[#ff7a1a] to-[#ff8533] dark:from-[#cc5200] dark:via-[#e65c00] dark:to-[#ff6600] py-20">
+  <div className="max-w-7xl mx-auto px-6 lg:px-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+          Welcome to oForum
+        </h1>
+        <p className="text-lg sm:text-xl text-white/90 max-w-2xl mb-8">
+          Build your own community with a minimal, fast, self-hostable forum inspired by Hacker News. Deploy with one binary and a PostgreSQL database — no JavaScript frameworks, no complexity.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a
+            href="/quickstart"
+            className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-[#ff6600] bg-white rounded-lg hover:bg-gray-50 transition-colors shadow-lg"
+          >
+            Get started
+            <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </a>
+          <a
+            href="/installation"
+            className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white border-2 border-white/30 bg-white/10 rounded-lg hover:bg-white/20 transition-colors backdrop-blur-sm"
+          >
+            Installation guide
+          </a>
+        </div>
+      </div>
+      <div className="hidden lg:block lg:col-span-5">
+        <div className="relative">
+          <div className="absolute inset-0 bg-white/10 backdrop-blur-sm rounded-2xl"></div>
+          <div className="relative p-8">
+            <div className="space-y-4 text-white/90 font-mono text-sm">
+              <div className="flex items-center space-x-2">
+                <span className="text-white/60">$</span>
+                <span>oforum init</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-white/60">$</span>
+                <span>oforum migrate</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-white/60">$</span>
+                <span>oforum</span>
+              </div>
+              <div className="text-green-300 mt-4">✓ Server running on :8080</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+      Get up and running in minutes
+    </h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+      Follow these steps to deploy your own oForum instance
+    </p>
+  </div>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+  <Steps>
+    <Step title="Install oForum">
+      Download and install the oForum binary with a single command:
 
-## Make it yours
+      ```bash
+      curl -fsSL https://raw.githubusercontent.com/arcten/oforum/main/install.sh | sudo sh
+      ```
 
-Design a docs site that looks great and empowers your users.
+      Pre-built binaries are available for macOS and Linux (amd64/arm64) on the [releases page](https://github.com/arcten/oforum/releases).
+    </Step>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
+    <Step title="Configure your database">
+      Generate a `.env` file with your PostgreSQL connection details:
+
+      ```bash
+      oforum init
+      ```
+
+      You'll be prompted for your database URL and port. The default configuration connects to `postgres://localhost:5432/oforum`.
+
+      <Accordion title="Example output">
+        ```
+        Database URL (default: postgres://localhost:5432/oforum?sslmode=disable)
+        > postgres://user:pass@localhost:5432/oforum
+
+        Port (default: 8080)
+        > 8080
+
+        ✓ Created .env
+        ```
+      </Accordion>
+    </Step>
+
+    <Step title="Run database migrations">
+      Apply the database schema automatically:
+
+      ```bash
+      oforum migrate
+      ```
+
+      Migrations are embedded in the binary and run automatically on server startup as well.
+    </Step>
+
+    <Step title="Start your forum">
+      Launch the server:
+
+      ```bash
+      oforum
+      ```
+
+      Open [http://localhost:8080](http://localhost:8080) in your browser. Your forum is live!
+
+      <Tip>
+        Run `oforum seed` to populate your forum with demo data including 30 users, 20 posts, and 200 comments. Default admin login: `alice` / `password123`
+      </Tip>
+    </Step>
+  </Steps>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+      Explore the documentation
+    </h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400">
+      Everything you need to deploy, customize, and manage your forum
+    </p>
+  </div>
+
+  <CardGroup cols={2}>
     <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+      title="Self-hosting guide"
+      icon="server"
+      href="/self-hosting/overview"
+    >
+      Deploy oForum with Docker, Fly.io, or manual setup on your own infrastructure
+    </Card>
+    <Card
+      title="User guide"
+      icon="users"
+      href="/user-guide/posts"
+    >
+      Learn how to create posts, comment, build reputation, and engage with your community
+    </Card>
+    <Card
+      title="Admin panel"
+      icon="shield-halved"
+      href="/admin/overview"
+    >
+      Manage users, create custom roles, organize with tags, and configure forum settings
+    </Card>
+    <Card
+      title="CLI reference"
+      icon="terminal"
+      href="/cli/overview"
+    >
+      Complete command-line reference for all oForum commands and options
+    </Card>
+  </CardGroup>
+</div>
 
-## Create beautiful pages
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+      Key features
+    </h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400">
+      Built for simplicity, performance, and self-hosting
+    </p>
+  </div>
 
-Everything you need to create world-class documentation.
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27]">
+      <div className="flex items-start space-x-4">
+        <div className="flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-[#ff6600]/10 dark:bg-[#ff6600]/20 flex items-center justify-center">
+            <svg className="w-6 h-6 text-[#ff6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Single binary deployment
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            Everything compiles into one executable with embedded migrations and templates. No build steps, no dependencies to install.
+          </p>
+        </div>
+      </div>
+    </div>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27]">
+      <div className="flex items-start space-x-4">
+        <div className="flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-[#ff6600]/10 dark:bg-[#ff6600]/20 flex items-center justify-center">
+            <svg className="w-6 h-6 text-[#ff6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+            </svg>
+          </div>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            PostgreSQL only
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            One environment variable, one database. No Redis, no message queues, no external services required.
+          </p>
+        </div>
+      </div>
+    </div>
 
-## Need inspiration?
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27]">
+      <div className="flex items-start space-x-4">
+        <div className="flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-[#ff6600]/10 dark:bg-[#ff6600]/20 flex items-center justify-center">
+            <svg className="w-6 h-6 text-[#ff6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+            </svg>
+          </div>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Server-rendered HTML
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            No JavaScript frameworks. Pages render in milliseconds with Go templates. Fast, simple, and SEO-friendly.
+          </p>
+        </div>
+      </div>
+    </div>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+    <div className="p-6 rounded-xl border border-gray-200 dark:border-[#27272a] bg-white dark:bg-[#1a1d27]">
+      <div className="flex items-start space-x-4">
+        <div className="flex-shrink-0">
+          <div className="w-10 h-10 rounded-lg bg-[#ff6600]/10 dark:bg-[#ff6600]/20 flex items-center justify-center">
+            <svg className="w-6 h-6 text-[#ff6600]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Rich community features
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400">
+            Posts, threaded comments, upvoting, user profiles with karma, admin panel, roles, tags, search, and leaderboards.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div className="mt-20 mb-16 max-w-5xl mx-auto px-6">
+  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#ff6600] to-[#ff8533] dark:from-[#cc5200] dark:to-[#ff6600] p-8 lg:p-12">
+    <div className="relative z-10">
+      <h2 className="text-3xl font-bold text-white mb-4">
+        Ready to start your community?
+      </h2>
+      <p className="text-lg text-white/90 mb-6 max-w-2xl">
+        Deploy oForum in minutes and start building your own Hacker News-style forum. Self-hosted, open source, and built for simplicity.
+      </p>
+      <a
+        href="/quickstart"
+        className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-[#ff6600] bg-white rounded-lg hover:bg-gray-50 transition-colors shadow-lg"
+      >
+        Get started now
+        <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        </svg>
+      </a>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,144 @@
+---
+title: CLI Overview
+description: Command-line interface for managing your oForum instance
+---
+
+The oForum CLI provides a simple, unified command-line interface for managing your forum instance. All operations—from initializing configuration to running the server—are handled through a single `oforum` binary.
+
+## Available Commands
+
+The CLI includes the following commands:
+
+<CardGroup cols={2}>
+  <Card title="serve" icon="server" href="/cli/serve">
+    Start the forum server (default command)
+  </Card>
+  <Card title="init" icon="file-lines" href="/cli/init">
+    Generate a .env configuration file
+  </Card>
+  <Card title="migrate" icon="database" href="/cli/migrate">
+    Run database migrations
+  </Card>
+  <Card title="seed" icon="seedling" href="/cli/seed">
+    Seed database with demo data
+  </Card>
+  <Card title="version" icon="tag" href="/cli/version">
+    Print version information
+  </Card>
+  <Card title="update" icon="arrows-rotate" href="/cli/update">
+    Update to latest release
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+Display available commands and usage information:
+
+```bash
+oforum help
+```
+
+The help command shows:
+- Command list with descriptions
+- Environment variable requirements
+- Usage examples
+- Current version number
+
+## Command Syntax
+
+```bash
+oforum [command]
+```
+
+If no command is specified, `serve` is used by default:
+
+```bash
+# These are equivalent
+oforum
+oforum serve
+```
+
+## Environment Variables
+
+Most commands require configuration through environment variables:
+
+<ParamField path="DATABASE_URL" type="string" required>
+  PostgreSQL connection string. Required for `serve`, `migrate`, and `seed` commands.
+  
+  Example: `postgres://user:pass@localhost:5432/oforum?sslmode=disable`
+</ParamField>
+
+<ParamField path="PORT" type="string" default="8080">
+  Server port for the `serve` command.
+  
+  Example: `PORT=3000`
+</ParamField>
+
+<Note>
+  Environment variables can be set in a `.env` file or exported in your shell. Use `oforum init` to generate a `.env` file interactively.
+</Note>
+
+## Common Workflows
+
+### First-Time Setup
+
+```bash
+# 1. Generate configuration
+oforum init
+
+# 2. Run migrations and start server
+oforum serve
+```
+
+The `serve` command automatically runs migrations before starting the server.
+
+### Development
+
+```bash
+# Reset and seed with demo data
+oforum seed
+
+# Start server on custom port
+PORT=3000 oforum serve
+```
+
+### Production Deployment
+
+```bash
+# Run migrations only (without starting server)
+oforum migrate
+
+# Start server with production database
+DATABASE_URL="postgres://..." oforum serve
+```
+
+### Updating
+
+```bash
+# Check current version
+oforum version
+
+# Update to latest release
+oforum update
+```
+
+## Exit Codes
+
+The CLI uses standard exit codes:
+
+- `0` - Success
+- `1` - Error (missing configuration, database connection failure, etc.)
+
+## Version Aliases
+
+Several aliases are available for common commands:
+
+```bash
+oforum version
+oforum --version
+oforum -v
+
+oforum help
+oforum --help
+oforum -h
+```

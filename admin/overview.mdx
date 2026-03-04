@@ -1,0 +1,86 @@
+---
+title: 'Admin Panel Overview'
+description: 'Learn how to access and use the oForum admin panel to manage your forum'
+---
+
+The admin panel provides comprehensive tools to manage users, content, and forum settings. Access the admin dashboard to monitor activity and configure your forum.
+
+## Accessing the Admin Panel
+
+The admin panel is available at the `/admin` route once you have admin privileges.
+
+<Steps>
+  <Step title="Become an admin">
+    Admin access is granted through the `is_admin` flag in the database. The first user registered typically receives admin privileges automatically, or you can manually set this flag in the database:
+    
+    ```sql
+    UPDATE users SET is_admin = true WHERE id = 1;
+    ```
+  </Step>
+  
+  <Step title="Navigate to admin panel">
+    Once you have admin privileges, visit `/admin` in your browser to access the admin dashboard.
+  </Step>
+  
+  <Step title="Explore admin sections">
+    The admin panel is organized into several sections, each accessible from the admin navigation menu.
+  </Step>
+</Steps>
+
+## Admin Capabilities
+
+As an admin, you have access to the following management areas:
+
+<CardGroup cols={2}>
+  <Card title="User Management" icon="users" href="/admin/user-management">
+    View all users, monitor activity, ban/unban users, and assign roles
+  </Card>
+  
+  <Card title="Role Management" icon="shield" href="/admin/roles">
+    Create custom roles, set role colors, manage role hierarchy
+  </Card>
+  
+  <Card title="Tag Management" icon="tag" href="/admin/tags">
+    Create and organize tags for categorizing posts
+  </Card>
+  
+  <Card title="Forum Settings" icon="gear" href="/admin/settings">
+    Configure forum name, rate limits, and operational settings
+  </Card>
+</CardGroup>
+
+## Admin Dashboard
+
+The admin dashboard (`/admin`) provides an overview of your forum:
+
+- **Total users**: Current user count
+- **Recent users**: Latest registered users with their statistics
+- **Forum settings**: Quick view of current configuration
+- **Quick actions**: Access to all admin sections
+
+## Security Considerations
+
+<Warning>
+  Admin privileges grant complete control over your forum. Protect your admin account carefully:
+  
+  - Use a strong, unique password
+  - Never share your admin credentials
+  - Regularly review user list for suspicious accounts
+  - Monitor the owner role assignments
+</Warning>
+
+<Note>
+  The `is_admin` flag provides admin panel access, but role-based permissions can also grant admin privileges through the `is_admin_rank` property on roles. Users with admin-ranked roles have equivalent administrative capabilities.
+</Note>
+
+## Navigation
+
+The admin panel includes navigation to all management sections:
+
+- **Dashboard**: Overview and statistics
+- **Users**: User management interface
+- **Roles**: Role creation and assignment
+- **Tags**: Tag management
+- **Settings**: Forum configuration
+
+Each section provides focused tools for managing specific aspects of your forum. Use the navigation menu to switch between sections efficiently.

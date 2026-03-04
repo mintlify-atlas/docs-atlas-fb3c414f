@@ -1,0 +1,382 @@
+---
+title: Fly.io deployment
+description: Deploy oForum to Fly.io's global platform with automatic SSL, scaling, and managed PostgreSQL
+---
+
+Fly.io provides the easiest path to a production oForum deployment with global edge hosting, automatic SSL, and managed PostgreSQL.
+
+## Why Fly.io?
+
+- **One command deployment**: `fly launch` handles everything
+- **Global CDN**: Deploy close to your users automatically
+- **Free tier**: Generous free allowance for small forums
+- **Managed PostgreSQL**: Automatic backups and scaling
+- **Automatic SSL**: HTTPS enabled by default
+
+## Prerequisites
+
+<Steps>
+  <Step title="Install the Fly CLI">
+    ```bash
+    curl -L https://fly.io/install.sh | sh
+    ```
+
+    For other installation methods, see [Fly.io docs](https://fly.io/docs/hands-on/install-flyctl/).
+  </Step>
+  
+  <Step title="Sign up and authenticate">
+    ```bash
+    fly auth signup
+    ```
+
+    Or if you already have an account:
+    ```bash
+    fly auth login
+    ```
+  </Step>
+</Steps>
+
+## Quick deployment
+
+Deploy oForum to Fly.io in three commands:
+
+<Steps>
+  <Step title="Launch your app">
+    From your oForum source directory:
+
+    ```bash
+    fly launch
+    ```
+
+    This will:
+    - Detect the Dockerfile automatically
+    - Create a new app with a unique name
+    - Generate a `fly.toml` configuration file
+    - Prompt you to create a PostgreSQL database
+
+    **Say yes** when asked about creating a PostgreSQL database.
+  </Step>
+  
+  <Step title="Set the database URL">
+    If you created a Fly PostgreSQL database, get the connection string:
+
+    ```bash
+    fly postgres connect -a <postgres-app-name>
+    ```
+
+    Then set it as a secret:
+    ```bash
+    fly secrets set DATABASE_URL="postgres://user:pass@your-db.fly.dev:5432/oforum"
+    ```
+
+    <Note>
+      Fly automatically attaches the database and sets `DATABASE_URL` if you created the database during `fly launch`.
+    </Note>
+  </Step>
+  
+  <Step title="Deploy">
+    ```bash
+    fly deploy
+    ```
+
+    Your forum will be live at `https://your-app.fly.dev` in about 2 minutes.
+  </Step>
+</Steps>
+
+## Understanding fly.toml
+
+oForum includes a `fly.toml` configuration file:
+
+```toml ~/workspace/source/fly.toml
+app = 'oforum'
+primary_region = 'sjc'
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 1024
+```
+
+**Key settings:**
+
+- `primary_region`: Closest region to your users (change to `iad`, `lhr`, `syd`, etc.)
+- `internal_port`: Must match the `PORT` environment variable (default: 8080)
+- `force_https`: Redirects all HTTP traffic to HTTPS
+- `auto_stop_machines`: Stops machines when idle (free tier friendly)
+- `memory`: 1GB is comfortable for most forums
+
+## Database setup
+
+Fly offers managed PostgreSQL with automatic backups:
+
+### Create a new database
+
+```bash
+fly postgres create
+```
+
+Follow the prompts to choose:
+- **Name**: `oforum-db` (or your preference)
+- **Region**: Same as your app for lowest latency
+- **VM size**: `shared-cpu-1x` with 256MB for small forums
+
+### Attach database to your app
+
+```bash
+fly postgres attach oforum-db -a oforum
+```
+
+This automatically sets the `DATABASE_URL` secret.
+
+### Using an external database
+
+You can also use any PostgreSQL provider (AWS RDS, DigitalOcean, etc.):
+
+```bash
+fly secrets set DATABASE_URL="postgres://user:pass@external-host:5432/oforum?sslmode=require"
+```
+
+<Warning>
+  Always use `sslmode=require` for external databases to encrypt connections.
+</Warning>
+
+## Secrets management
+
+Never hardcode sensitive data in `fly.toml`. Use secrets instead:
+
+### Set secrets
+
+```bash
+fly secrets set DATABASE_URL="postgres://..."
+```
+
+### List secrets (values are hidden)
+
+```bash
+fly secrets list
+```
+
+### Remove secrets
+
+```bash
+fly secrets unset DATABASE_URL
+```
+
+Secrets are encrypted and only available to your application at runtime.
+
+## Environment variables
+
+For non-sensitive configuration, use the `[env]` section in `fly.toml`:
+
+```toml fly.toml
+[env]
+  PORT = "8080"
+  GIN_MODE = "release"
+```
+
+For sensitive values, always use `fly secrets set`.
+
+See the [environment variables reference](/self-hosting/environment) for all available options.
+
+## Deployment and updates
+
+### Deploy changes
+
+After modifying your code:
+
+```bash
+fly deploy
+```
+
+Fly will:
+1. Build a new Docker image
+2. Run database migrations automatically
+3. Deploy with zero downtime
+4. Roll back automatically if health checks fail
+
+### View logs
+
+```bash
+fly logs
+```
+
+Or follow logs in real-time:
+
+```bash
+fly logs -f
+```
+
+### Check app status
+
+```bash
+fly status
+```
+
+### SSH into your machine
+
+```bash
+fly ssh console
+```
+
+### Scale your app
+
+Increase memory:
+```bash
+fly scale memory 2048
+```
+
+Add more VMs:
+```bash
+fly scale count 2
+```
+
+## Custom domains
+
+Add your own domain instead of `your-app.fly.dev`:
+
+<Steps>
+  <Step title="Add the certificate">
+    ```bash
+    fly certs add yourdomain.com
+    ```
+
+    Fly will show you the DNS records to add.
+  </Step>
+  
+  <Step title="Update DNS records">
+    Add these records to your DNS provider:
+
+    ```
+    A     @    <ip-from-fly>
+    AAAA  @    <ipv6-from-fly>
+    ```
+
+    Or use a CNAME:
+    ```
+    CNAME @    your-app.fly.dev
+    ```
+  </Step>
+  
+  <Step title="Verify the certificate">
+    ```bash
+    fly certs check yourdomain.com
+    ```
+
+    SSL certificates are provisioned automatically via Let's Encrypt.
+  </Step>
+</Steps>
+
+<Note>
+  Certificate validation can take up to 24 hours depending on DNS propagation.
+</Note>
+
+## Monitoring and maintenance
+
+### View resource usage
+
+```bash
+fly dashboard
+```
+
+Opens the Fly.io dashboard in your browser showing:
+- CPU and memory usage
+- Request metrics
+- Machine status
+- Billing information
+
+### Database backups
+
+Fly PostgreSQL includes automatic daily backups. To create a manual backup:
+
+```bash
+fly postgres backup create -a oforum-db
+```
+
+List backups:
+```bash
+fly postgres backup list -a oforum-db
+```
+
+### Health checks
+
+Fly performs automatic health checks on your application. If health checks fail, Fly will:
+1. Stop routing traffic to the unhealthy instance
+2. Attempt to restart the machine
+3. Alert you if the problem persists
+
+View health check status:
+```bash
+fly checks list
+```
+
+## Pricing and free tier
+
+Fly.io's free tier includes:
+- Up to 3 shared-cpu-1x VMs with 256MB RAM
+- 3GB persistent storage
+- 160GB outbound data transfer
+
+This is sufficient for small to medium forums. For larger deployments, see [Fly.io pricing](https://fly.io/docs/about/pricing/).
+
+## Troubleshooting
+
+### Deployment fails
+
+Check the build logs:
+```bash
+fly logs --all
+```
+
+Verify your Dockerfile builds locally:
+```bash
+docker build .
+```
+
+### Database connection errors
+
+Verify the database is attached:
+```bash
+fly postgres db list -a oforum-db
+```
+
+Check the `DATABASE_URL` secret is set:
+```bash
+fly secrets list
+```
+
+Test the connection:
+```bash
+fly ssh console
+# Inside the machine:
+echo $DATABASE_URL
+```
+
+### App won't start
+
+Check if migrations failed:
+```bash
+fly logs | grep -i migration
+```
+
+SSH in and run migrations manually:
+```bash
+fly ssh console
+./oforum migrate
+```
+
+## Next steps
+
+- [Environment variables reference](/self-hosting/environment)
+- [Custom domain setup](https://fly.io/docs/app-guides/custom-domains-with-fly/)
+- [Scaling guide](https://fly.io/docs/reference/scaling/)

@@ -1,0 +1,215 @@
+---
+title: init
+description: Generate a .env configuration file interactively
+---
+
+The `init` command creates a `.env` file with your database and server configuration through an interactive prompt.
+
+## Usage
+
+```bash
+oforum init
+```
+
+## Interactive Prompts
+
+The command prompts you for two configuration values:
+
+### Database URL
+
+```
+Database URL (default: postgres://localhost:5432/oforum?sslmode=disable)
+>
+```
+
+<ParamField path="Database URL" type="string" default="postgres://localhost:5432/oforum?sslmode=disable">
+  PostgreSQL connection string in the format:
+  
+  ```
+  postgres://[user[:password]@]host[:port]/database[?options]
+  ```
+  
+  Press Enter to use the default value for local development.
+</ParamField>
+
+### Port
+
+```
+Port (default: 8080)
+>
+```
+
+<ParamField path="Port" type="string" default="8080">
+  HTTP server port number. Press Enter to use the default port 8080.
+</ParamField>
+
+## Output Format
+
+The generated `.env` file contains:
+
+```bash .env
+DATABASE_URL=postgres://localhost:5432/oforum?sslmode=disable
+PORT=8080
+```
+
+## Overwrite Behavior
+
+If a `.env` file already exists, you'll be prompted for confirmation:
+
+```
+⚠ .env already exists. Overwrite? [y/N]
+```
+
+<CodeGroup>
+```bash Overwrite existing file
+⚠ .env already exists. Overwrite? [y/N] y
+
+  oforum init
+
+Database URL (default: postgres://localhost:5432/oforum?sslmode=disable)
+> postgres://db.example.com:5432/prod_forum
+
+Port (default: 8080)
+> 3000
+
+✓ Created .env
+
+DATABASE_URL=postgres://db.example.com:5432/prod_forum
+PORT=3000
+
+Run oforum to start the server.
+```
+
+```bash Cancel without changes
+⚠ .env already exists. Overwrite? [y/N] n
+  cancelled
+```
+</CodeGroup>
+
+## Examples
+
+### Local Development
+
+Use defaults for local PostgreSQL:
+
+```bash
+oforum init
+# Press Enter twice to accept defaults
+```
+
+Output:
+```
+  oforum init
+
+Database URL (default: postgres://localhost:5432/oforum?sslmode=disable)
+>
+Port (default: 8080)
+>
+
+✓ Created .env
+
+DATABASE_URL=postgres://localhost:5432/oforum?sslmode=disable
+PORT=8080
+
+Run oforum to start the server.
+```
+
+### Production Deployment
+
+Configure for remote database:
+
+```bash
+oforum init
+```
+
+Enter values:
+```
+Database URL: postgres://user:pass@db.example.com:5432/oforum_prod?sslmode=require
+Port: 8080
+```
+
+### Custom Port
+
+Use local database on different port:
+
+```bash
+oforum init
+```
+
+Enter:
+```
+Database URL: [press Enter for default]
+Port: 3000
+```
+
+## Manual Configuration
+
+You can also create or edit `.env` manually:
+
+```bash .env
+DATABASE_URL=postgres://localhost:5432/oforum?sslmode=disable
+PORT=8080
+```
+
+<Note>
+  The `.env` file is loaded automatically by `oforum serve` and other commands. You don't need to export variables manually.
+</Note>
+
+## Connection String Format
+
+### Basic Format
+
+```
+postgres://localhost:5432/oforum
+```
+
+### With Authentication
+
+```
+postgres://username:password@localhost:5432/oforum
+```
+
+### With SSL
+
+```
+postgres://user:pass@db.example.com:5432/oforum?sslmode=require
+```
+
+### Without SSL (Local Development)
+
+```
+postgres://localhost:5432/oforum?sslmode=disable
+```
+
+<Warning>
+  Always use `sslmode=require` in production to encrypt database connections.
+</Warning>
+
+## SSL Mode Options
+
+The `sslmode` parameter controls PostgreSQL SSL behavior:
+
+- `disable` - No SSL (local development only)
+- `require` - Require SSL but don't verify certificate
+- `verify-ca` - Require SSL and verify CA certificate
+- `verify-full` - Require SSL and verify certificate + hostname
+
+<Note>
+  If your connection string doesn't include `sslmode`, oForum automatically appends `sslmode=disable` for local connections. In production, explicitly set `sslmode=require`.
+</Note>
+
+## Next Steps
+
+After creating your `.env` file:
+
+1. **Start the server** (migrations run automatically):
+   ```bash
+   oforum
+   ```
+
+2. **Seed demo data** (optional for development):
+   ```bash
+   oforum seed
+   ```
+
+3. **Access the forum** at `http://localhost:8080`

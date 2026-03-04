@@ -1,0 +1,233 @@
+---
+title: User Profiles
+description: Customize your profile, track your reputation, and view your forum activity
+---
+
+User profiles in oForum showcase your contributions, reputation, and personal information. Each profile is a hub for your forum identity.
+
+## Viewing User Profiles
+
+Every user has a public profile accessible by clicking their username anywhere on the forum.
+
+Profile pages display:
+- Username and display name
+- Bio and about sections
+- Reputation score (karma)
+- Roles and badges
+- Post history
+- Comment history
+- Join date
+
+<Note>
+  Profiles use the format `/user/username` in the URL. They're public and can be shared with anyone.
+</Note>
+
+## Reputation and Karma
+
+Reputation (also called karma) is a measure of community recognition:
+
+### How It's Calculated
+
+Your reputation score is the total number of upvotes you've received on:
+- Your posts
+- Your comments
+
+The formula is simple:
+```
+Reputation = (Upvotes on all your posts) + (Upvotes on all your comments)
+```
+
+<Accordion title="Example Reputation Calculation">
+  If you have:
+  - 5 posts with 3, 7, 2, 10, and 5 upvotes (27 total)
+  - 20 comments with various upvotes totaling 45
+  
+  Your reputation = 27 + 45 = **72 points**
+</Accordion>
+
+### What Reputation Represents
+
+- **Community value**: Higher reputation indicates consistent, valuable contributions
+- **Trust indicator**: More experienced users naturally accumulate higher scores
+- **Engagement metric**: Active participation leads to higher reputation
+- **Quality signal**: Posts and comments that resonate get upvoted more
+
+<Tip>
+  Focus on quality contributions rather than chasing reputation. Thoughtful posts and helpful comments naturally earn upvotes over time.
+</Tip>
+
+## Profile Customization
+
+You can customize several aspects of your profile:
+
+### Editable Profile Fields
+
+<Steps>
+  <Step title="Visit Your Profile">
+    Click your username to go to your profile page.
+  </Step>
+  
+  <Step title="Access Edit Form">
+    Look for the profile edit form (visible only on your own profile).
+  </Step>
+  
+  <Step title="Update Fields">
+    Modify any of these fields:
+    - **Display Name** (max 128 characters): A friendly name shown alongside your username
+    - **Bio** (max 256 characters): A brief one-liner about yourself
+    - **About** (max 2000 characters): A longer description or introduction
+    - **Email** (max 256 characters): Your email address (not publicly visible by default)
+  </Step>
+  
+  <Step title="Save Changes">
+    Submit the form to update your profile.
+  </Step>
+</Steps>
+
+<Note>
+  Your username cannot be changed after account creation. All other fields are editable at any time.
+</Note>
+
+### Character Limits
+
+Profile fields have enforced character limits to maintain site performance:
+
+| Field | Maximum Length |
+|-------|---------------|
+| Display Name | 128 characters |
+| Bio | 256 characters |
+| About | 2000 characters |
+| Email | 256 characters |
+
+Excess characters are automatically truncated to these limits.
+
+## Password Changes
+
+You can update your password at any time:
+
+<Steps>
+  <Step title="Navigate to Password Change">
+    Access the password change page from your profile or account settings.
+  </Step>
+  
+  <Step title="Enter Current Password">
+    Verify your identity by entering your current password.
+  </Step>
+  
+  <Step title="Set New Password">
+    Enter your new password (minimum 6 characters) and confirm it.
+  </Step>
+  
+  <Step title="Submit">
+    Your password will be updated immediately upon successful submission.
+  </Step>
+</Steps>
+
+<Warning>
+  Password requirements:
+  - Minimum 6 characters
+  - New password and confirmation must match
+  - Current password must be correct
+</Warning>
+
+<Tip>
+  Use a strong, unique password for your forum account. Consider a password manager to generate and store complex passwords.
+</Tip>
+
+## Activity History
+
+Your profile displays your complete forum activity:
+
+### Posts Section
+
+All posts you've created, showing:
+- Post titles (clickable)
+- Points received
+- Comment count
+- Creation date
+- Tags
+- Associated URL (if any)
+
+Posts are sorted by creation date, newest first.
+
+### Comments Section
+
+All comments you've written, displaying:
+- Comment text
+- Points received
+- Parent post title (clickable)
+- Creation date
+
+Comments are also sorted by creation date, newest first.
+
+<Note>
+  Your activity history helps you track your contributions and revisit discussions you've participated in.
+</Note>
+
+## Roles and Badges
+
+oForum supports a role system for community organization:
+
+### What Roles Are
+
+Roles are colored badges that appear next to usernames:
+- Assigned by forum administrators
+- Can represent status, expertise, or community position
+- Examples: Moderator, Admin, Contributor, Expert, etc.
+
+### Role Display
+
+Roles appear:
+- Next to your username on posts
+- Next to your username on comments
+- On your profile page
+- On the leaderboard
+
+### Role Properties
+
+Each role has:
+- **Name**: The role title
+- **Color**: Custom color for the badge
+- **Sort Order**: Determines which role shows first if you have multiple
+- **Admin Rank**: Special flag for administrative roles
+
+<Tip>
+  Roles are visible but don't grant any special permissions (except admin roles). They're primarily for community recognition and organization.
+</Tip>
+
+### Multiple Roles
+
+Users can have multiple roles:
+- Only one role badge displays at a time
+- The role with the highest sort order (lowest number) takes precedence
+- All your roles are listed on your profile page
+
+<Accordion title="Role Display Example">
+  If you have roles:
+  - "Moderator" (sort order: 1, color: blue)
+  - "Contributor" (sort order: 2, color: green)
+  
+  The "Moderator" badge will display next to your name since it has the higher priority (lower sort order number).
+</Accordion>
+
+## Account Age
+
+Your join date appears on your profile and in some places next to your username:
+
+- Shown as "Joined [date]"
+- Helps establish community seniority
+- Visible to all users
+
+<Note>
+  Account age has no direct impact on permissions or features—it's informational only.
+</Note>
+
+## Privacy Considerations
+
+Profile information visibility:
+
+- **Public**: Username, display name, bio, about, reputation, posts, comments, roles
+- **Private**: Email (stored but not displayed publicly by default)
+- **Hidden**: Password hash (never visible)
+
+Your post and comment history is always public as part of the forum's open discussion model.

@@ -1,80 +1,264 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get oForum up and running in 5 minutes with this step-by-step guide
 ---
 
-## Get started in three steps
+## Get started in 5 minutes
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will walk you through installing oForum, setting up your database, and starting your forum.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Before you begin, make sure you have PostgreSQL installed and running on your system.
 </Note>
+
+<Steps>
+  <Step title="Install oForum">
+    Run the installation script to download the latest version:
+
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/arcten/oforum/main/install.sh | sudo sh
+    ```
+
+    This installs the `oforum` binary to `/usr/local/bin` and makes it available system-wide.
+
+    <Accordion title="What does the install script do?">
+      The script:
+      - Detects your OS and architecture (macOS/Linux, amd64/arm64)
+      - Downloads the latest pre-built binary from GitHub releases
+      - Installs it to `/usr/local/bin/oforum`
+      - Optionally installs the man page to `/usr/local/share/man/man1`
+    </Accordion>
+
+    Verify the installation:
+
+    ```bash
+    oforum version
+    ```
+
+    Expected output:
+    ```
+    oforum v0.0.2
+    Run 'oforum update' to check for updates
+    ```
+  </Step>
+
+  <Step title="Initialize configuration">
+    Run the interactive setup to generate your `.env` file:
+
+    ```bash
+    oforum init
+    ```
+
+    You'll be prompted for:
+    - **Database URL** - Your PostgreSQL connection string
+    - **Port** - The port to run the server on (default: 8080)
+
+    Example interaction:
+    ```
+      oforum init
+
+      Database URL (default: postgres://localhost:5432/oforum?sslmode=disable)
+      > postgres://localhost:5432/oforum?sslmode=disable
+
+      Port (default: 8080)
+      > 8080
+
+      ✓ Created .env
+
+      DATABASE_URL=postgres://localhost:5432/oforum?sslmode=disable
+      PORT=8080
+
+      Run oforum to start the server.
+    ```
+
+    <Tip>
+      Make sure your PostgreSQL database exists before continuing. Create it with:
+      ```bash
+      createdb oforum
+      ```
+    </Tip>
+  </Step>
+
+  <Step title="Run database migrations">
+    Apply the database schema:
+
+    ```bash
+    oforum migrate
+    ```
+
+    Expected output:
+    ```
+      ⟳ Running migrations...
+      ✓ Migrations applied
+    ```
+
+    <Note>
+      Migrations also run automatically when you start the server, so this step is optional. However, running migrations separately is useful for debugging or when deploying.
+    </Note>
+  </Step>
+
+  <Step title="Start the server">
+    Launch oForum:
+
+    ```bash
+    oforum
+    ```
+
+    You'll see:
+    ```
+    2026/03/04 10:30:15 Migrations applied successfully
+    2026/03/04 10:30:15 Starting server on :8080
+    [GIN-debug] Listening and serving HTTP on :8080
+    ```
+
+    Open [http://localhost:8080](http://localhost:8080) in your browser. You should see the oForum homepage!
+  </Step>
+</Steps>
+
+## Seed demo data (optional)
+
+<Tip>
+  Want to explore oForum with sample content? Seed the database with demo users, posts, and comments.
+</Tip>
+
+Stop the server (Ctrl+C), then run:
+
+```bash
+oforum seed
+```
+
+This creates:
+- **30 users** with usernames like alice, bob, charlie, etc.
+- **20 posts** with realistic titles and content
+- **200 comments** across the posts
+
+Output:
+```
+  ⟳ Seeding database...
+
+  ✓ 30 users created
+  ✓ admin: alice
+  ✓ 20 posts created
+  ✓ 200 comments created
+
+  ✓ Seed complete
+
+  Default login: alice / password123
+```
+
+Restart the server and log in with:
+- **Username:** `alice`
+- **Password:** `password123`
+
+The first seeded user (alice) is automatically an admin, so you can access the admin panel at [http://localhost:8080/admin](http://localhost:8080/admin).
+
+## Quick reference
+
+Here are the essential oForum commands:
+
+<CodeGroup>
+```bash Start the server
+oforum
+```
+
+```bash Initialize config
+oforum init
+```
+
+```bash Run migrations
+oforum migrate
+```
+
+```bash Seed demo data
+oforum seed
+```
+
+```bash Check version
+oforum version
+```
+
+```bash Update to latest
+oforum update
+```
+
+```bash Get help
+oforum help
+```
+</CodeGroup>
+
+## Environment variables
+
+oForum configuration is minimal:
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
+| `PORT` | No | `8080` | Server port |
+
+You can override variables when starting:
+
+```bash
+PORT=3000 oforum
+```
+
+Or set them directly without a `.env` file:
+
+```bash
+DATABASE_URL="postgres://user:pass@host:5432/oforum" oforum
+```
+
+## What's next?
+
+<CardGroup cols={2}>
+  <Card title="Installation guide" icon="download" href="/installation">
+    Explore alternative installation methods and platform-specific instructions
+  </Card>
+  <Card title="Self-hosting" icon="rocket" href="/self-hosting/overview">
+    Learn how to deploy oForum to production environments
+  </Card>
+  <Card title="Environment variables" icon="gear" href="/self-hosting/environment">
+    Understand all configuration options and environment variables
+  </Card>
+  <Card title="Admin guide" icon="shield" href="/admin/overview">
+    Manage users, roles, and forum settings
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<Accordion title="Error: DATABASE_URL is required">
+  Make sure you've run `oforum init` or set the `DATABASE_URL` environment variable:
+  ```bash
+  export DATABASE_URL="postgres://localhost:5432/oforum?sslmode=disable"
+  oforum
+  ```
+</Accordion>
+
+<Accordion title="Error: connection refused to database">
+  Ensure PostgreSQL is running:
+  ```bash
+  # macOS (Homebrew)
+  brew services start postgresql
+
+  # Linux (systemd)
+  sudo systemctl start postgresql
+  ```
+
+  And that the database exists:
+  ```bash
+  createdb oforum
+  ```
+</Accordion>
+
+<Accordion title="Port already in use">
+  Change the port:
+  ```bash
+  PORT=3000 oforum
+  ```
+
+  Or find and stop the process using port 8080:
+  ```bash
+  lsof -i :8080
+  kill <PID>
+  ```
+</Accordion>

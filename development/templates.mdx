@@ -1,0 +1,516 @@
+---
+title: Templates
+description: Work with Go's html/template system in oForum
+---
+
+## Template System
+
+oForum uses Go's built-in `html/template` package for server-side rendering. All templates are **embedded** into the binary at compile time.
+
+```go main.go:32-33
+//go:embed templates/*.html
+var templatesFS embed.FS
+```
+
+<Note>
+Templates are compiled into the binary, so changes require a server restart (use `air` for hot reload during development).
+</Note>
+
+## Template Structure
+
+All templates share a common header and footer:
+
+```
+templates/
+├── header.html           # Shared header with nav
+├── footer.html           # Shared footer with scripts
+├── home.html             # Homepage
+├── post.html             # Post detail page
+├── user.html             # User profile
+├── submit.html           # Post submission form
+├── login.html            # Login page
+├── signup.html           # Signup page
+├── comment.html          # Comment partial (recursive)
+├── admin.html            # Admin dashboard
+├── admin_users.html      # Admin user management
+├── admin_roles.html      # Admin role management
+├── admin_tags.html       # Admin tag management
+└── ...
+```
+
+## Header and Footer
+
+### header.html
+
+Defines the document structure and navigation:
+
+```html templates/header.html:1-29
+{{ define "header" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ if .PageTitle }}{{ .PageTitle }} — {{ .ForumName }}{{ else }}{{ .ForumName }}{{ end }}</title>
+    {{ if .MetaDescription }}<meta name="description" content="{{ .MetaDescription }}">{{ end }}
+    {{ if .Canonical }}<link rel="canonical" href="{{ .Canonical }}">{{ end }}
+    
+    <script>
+        (function() {
+            const t = localStorage.getItem('theme');
+            if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+    {{ if .User }}<script>window.__user={username:"{{ .User.Username }}"};</script>{{ end }}
+    
+    <style>/* Inlined Tailwind CSS */</style>
+</head>
+<body class="bg-stone-50 text-stone-900 dark:bg-stone-900 dark:text-stone-100 min-h-screen">
+    <div class="max-w-3xl w-full mx-auto px-4">
+        <nav class="border-b border-stone-200 dark:border-stone-800 py-3 flex items-center gap-4">
+            <a href="/" class="font-bold">{{ .ForumName }}</a>
+            <a href="/">top</a>
+            <a href="/new">new</a>
+            <!-- ... more nav items -->
+```
+
+### footer.html
+
+Closes the document and includes interactive JavaScript:
+
+```html templates/footer.html:1-11
+{{ define "footer" }}
+        </main>
+        <footer class="border-t border-stone-200 dark:border-stone-800 py-4 flex items-center gap-4 text-xs">
+            <a href="/leaderboard">leaderboard</a>
+            <a href="/guidelines">guidelines</a>
+            <a href="/faq">faq</a>
+            <a href="https://github.com/arcten/oforum">source</a>
+        </footer>
+    </div>
+    <script>
+        // Theme toggle, PJAX, optimistic UI...
+```
+
+**Every page includes:**
+```html
+{{ template "header" . }}
+<!-- Page content -->
+{{ template "footer" . }}
+```
+
+## Template Functions
+
+Custom functions are registered in `main.go` and available in all templates:
+
+```go main.go:276-311
+funcMap := template.FuncMap{
+    "timeago": handlers.TimeAgo,
+    "mul":     func(a, b int) int { return a * b },
+    "dict": func(pairs ...any) map[string]any {
+        m := make(map[string]any)
+        for i := 0; i < len(pairs); i += 2 {
+            key, _ := pairs[i].(string)
+            m[key] = pairs[i+1]
+        }
+        return m
+    },
+    "eq":               func(a, b any) bool { return a == b },
+    "add":              func(a, b int) int { return a + b },
+    "sub":              func(a, b int) int { return a - b },
+    "gt":               func(a, b int) bool { return a > b },
+    "lt":               func(a, b int) bool { return a < b },
+    "formatContent":    handlers.FormatContent,
+    "usernameHTML":     handlers.UsernameHTML,
+    "highestRoleColor": handlers.HighestRoleColor,
+    "isNewUser":        handlers.IsNewUser,
+    "hasRole":          func(roles []models.Role, roleID int) bool { /* ... */ },
+    "seq":              func(n int) []int { /* ... */ },
+}
+```
+
+### timeago
+
+Converts timestamps to relative time:
+
+```go handlers/helpers.go:131-167
+func TimeAgo(t time.Time) string {
+    d := time.Since(t)
+    switch {
+    case d.Hours() >= 8760:
+        y := int(math.Floor(d.Hours() / 8760))
+        if y == 1 {
+            return "1 year ago"
+        }
+        return fmt.Sprintf("%d years ago", y)
+    case d.Hours() >= 720:
+        m := int(math.Floor(d.Hours() / 720))
+        if m == 1 {
+            return "1 month ago"
+        }
+        return fmt.Sprintf("%d months ago", m)
+    case d.Hours() >= 24:
+        days := int(math.Floor(d.Hours() / 24))
+        if days == 1 {
+            return "1 day ago"
+        }
+        return fmt.Sprintf("%d days ago", days)
+    // ... more cases
+}
+```
+
+**Usage in templates:**
+```html
+<span>{{ timeago .Post.CreatedAt }}</span>
+<!-- Output: "3 hours ago" -->
+```
+
+### formatContent
+
+Converts `<URL>` syntax to clickable links while preventing XSS:
+
+```go handlers/helpers.go:20-46
+func FormatContent(s string) template.HTML {
+    var buf strings.Builder
+    lastIndex := 0
+    for _, match := range linkRe.FindAllStringSubmatchIndex(s, -1) {
+        // Escape text before the match
+        buf.WriteString(html.EscapeString(s[lastIndex:match[0]]))
+        // Extract URL
+        rawURL := s[match[2]:match[3]]
+        href := rawURL
+        if !strings.HasPrefix(href, "http://") && !strings.HasPrefix(href, "https://") {
+            href = "https://" + href
+        }
+        escapedHref := html.EscapeString(href)
+        escapedDisplay := html.EscapeString(rawURL)
+        buf.WriteString(`<a href="`)
+        buf.WriteString(escapedHref)
+        buf.WriteString(`" target="_blank" rel="nofollow noopener" class="underline">` )
+        buf.WriteString(escapedDisplay)
+        buf.WriteString(`</a>`)
+        lastIndex = match[1]
+    }
+    buf.WriteString(html.EscapeString(s[lastIndex:]))
+    return template.HTML(buf.String())
+}
+```
+
+**How it works:**
+1. **Escape all user input** (prevents XSS)
+2. Find `<URL>` patterns with regex
+3. Replace with safe `<a>` tags
+4. Return as `template.HTML` (won't be re-escaped)
+
+**Usage:**
+```html
+<div>{{ formatContent .Post.Body }}</div>
+<!-- Input: "Check out <example.com>" -->
+<!-- Output: "Check out <a href="https://example.com">example.com</a>" -->
+```
+
+### usernameHTML
+
+Renders colored usernames with role badges:
+
+```go handlers/helpers.go:49-75
+func UsernameHTML(username string, roles []models.Role, createdAt time.Time) template.HTML {
+    color := ""
+    if len(roles) > 0 {
+        color = roles[0].Color // First role is highest rank
+    }
+    
+    isNew := !createdAt.IsZero() && time.Since(createdAt) < 7*24*time.Hour
+    
+    var buf strings.Builder
+    buf.WriteString(`<a href="/user/`)
+    buf.WriteString(html.EscapeString(username))
+    buf.WriteString(`"`)
+    if color != "" {
+        buf.WriteString(` style="color: `)
+        buf.WriteString(html.EscapeString(color))
+        buf.WriteString(`"`)
+    }
+    buf.WriteString(`>`)
+    buf.WriteString(html.EscapeString(username))
+    buf.WriteString(`</a>`)
+    if isNew {
+        buf.WriteString(`<span class="new-badge text-green-500">*</span>`)
+    }
+    
+    return template.HTML(buf.String())
+}
+```
+
+**Usage:**
+```html
+{{ usernameHTML .Post.Username .Post.UserRoles .Post.UserCreatedAt }}
+<!-- Output: <a href="/user/alice" style="color: #ef4444">alice</a>* -->
+```
+
+### dict
+
+Passes multiple values to sub-templates:
+
+```go main.go:279-286
+"dict": func(pairs ...any) map[string]any {
+    m := make(map[string]any)
+    for i := 0; i < len(pairs); i += 2 {
+        key, _ := pairs[i].(string)
+        m[key] = pairs[i+1]
+    }
+    return m
+},
+```
+
+**Usage:**
+```html
+{{ template "comment.html" dict "Comment" . "Depth" 0 "CurrentUser" $.User }}
+```
+
+### Arithmetic and Comparison
+
+```go
+"eq":  func(a, b any) bool { return a == b }
+"add": func(a, b int) int { return a + b }
+"sub": func(a, b int) int { return a - b }
+"gt":  func(a, b int) bool { return a > b }
+"lt":  func(a, b int) bool { return a < b }
+"mul": func(a, b int) int { return a * b }
+```
+
+**Usage:**
+```html
+{{ if gt .Post.Points 10 }}
+    <span class="text-green-500">Popular!</span>
+{{ end }}
+
+<div style="margin-left: {{ mul .Depth 24 }}px">
+```
+
+## Template Examples
+
+### Simple Page
+
+```html templates/home.html (simplified)
+{{ template "header" . }}
+
+<h1 class="text-2xl font-bold mb-4">{{ .PageTitle }}</h1>
+
+{{ range .Posts }}
+<div class="mb-3 pb-3 border-b">
+    <a href="/post/{{ .Slug }}" class="font-medium">{{ .Title }}</a>
+    <div class="text-xs text-stone-500 mt-1">
+        {{ .Points }} points | 
+        by {{ usernameHTML .Username .UserRoles .UserCreatedAt }} | 
+        {{ timeago .CreatedAt }} | 
+        {{ .CommentCount }} comments
+    </div>
+</div>
+{{ end }}
+
+{{ template "footer" . }}
+```
+
+### Conditional Rendering
+
+```html
+{{ if .User }}
+    <a href="/submit">Submit Post</a>
+{{ else }}
+    <a href="/login">Login to Post</a>
+{{ end }}
+
+{{ if .User.IsAdmin }}
+    <a href="/admin" class="text-orange-500">Admin Panel</a>
+{{ end }}
+```
+
+### Loops
+
+```html
+{{ range .Posts }}
+    <div>
+        <h2>{{ .Title }}</h2>
+        {{ range .Tags }}
+            <span class="tag">{{ .Name }}</span>
+        {{ end }}
+    </div>
+{{ else }}
+    <p>No posts found.</p>
+{{ end }}
+```
+
+### Nested Templates (Recursive)
+
+Comment threads use recursive template includes:
+
+```html templates/comment.html (simplified)
+{{ define "comment.html" }}
+<div style="margin-left: {{ mul .Depth 24 }}px" class="py-2">
+    <div class="text-xs text-stone-500 mb-1">
+        {{ usernameHTML .Comment.Username .Comment.UserRoles .Comment.UserCreatedAt }} | 
+        {{ timeago .Comment.CreatedAt }} | 
+        {{ .Comment.Points }} points
+    </div>
+    <div class="whitespace-pre-wrap">{{ formatContent .Comment.Body }}</div>
+    
+    {{ range .Comment.Children }}
+        {{ template "comment.html" dict "Comment" . "Depth" (add $.Depth 1) }}
+    {{ end }}
+</div>
+{{ end }}
+```
+
+## XSS Protection
+
+Go's `html/template` **auto-escapes** all data by default:
+
+```html
+<!-- Automatic escaping -->
+<div>{{ .Post.Title }}</div>
+<!-- If Title = "<script>alert('xss')</script>" -->
+<!-- Output: &lt;script&gt;alert('xss')&lt;/script&gt; -->
+```
+
+### Safe HTML Output
+
+Use `template.HTML` for trusted content only:
+
+```go
+func FormatContent(s string) template.HTML {
+    // 1. Escape ALL user input first
+    escaped := html.EscapeString(s)
+    
+    // 2. Generate safe HTML
+    safe := strings.ReplaceAll(escaped, "...", "<a>...</a>")
+    
+    // 3. Return as template.HTML (won't be re-escaped)
+    return template.HTML(safe)
+}
+```
+
+<Warning>
+**Never** use `template.HTML` directly on user input:
+```go
+// ❌ DANGEROUS - XSS vulnerability
+return template.HTML(userInput)
+
+// ✅ SAFE - escape first
+return template.HTML(html.EscapeString(userInput))
+```
+</Warning>
+
+## Registering New Template Functions
+
+<Steps>
+  <Step title="Write the Function">
+    Add to `internal/handlers/helpers.go`:
+    ```go
+    func UpperCase(s string) string {
+        return strings.ToUpper(s)
+    }
+    ```
+  </Step>
+  
+  <Step title="Register in main.go">
+    Add to the `funcMap` in `main.go`:
+    ```go
+    funcMap := template.FuncMap{
+        "timeago": handlers.TimeAgo,
+        "uppercase": handlers.UpperCase,  // ← Add here
+        // ... other functions
+    }
+    ```
+  </Step>
+  
+  <Step title="Use in Templates">
+    ```html
+    <h1>{{ uppercase .Title }}</h1>
+    ```
+  </Step>
+  
+  <Step title="Restart Server">
+    Template functions are registered at startup, so restart is required.
+  </Step>
+</Steps>
+
+## Styling
+
+oForum uses **inlined Tailwind CSS** (compiled and embedded in `header.html`):
+
+```html
+<div class="bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-stone-100">
+    <h1 class="text-2xl font-bold mb-4">Title</h1>
+    <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+        Submit
+    </button>
+</div>
+```
+
+**Dark mode** is handled via the `dark:` prefix and JavaScript theme toggle.
+
+## Best Practices
+
+### Pass Minimal Data
+
+```go
+// ❌ Bad - passing entire structs
+data := gin.H{
+    "Everything": everythingStruct,
+}
+
+// ✅ Good - only what templates need
+data := gin.H{
+    "PageTitle": "Home",
+    "Posts": posts,
+    "User": currentUser,
+}
+```
+
+### Use baseData() Helper
+
+```go handlers/helpers.go:93-108
+func baseData(c *gin.Context) gin.H {
+    data := gin.H{"Version": Version}
+    user := auth.GetCurrentUser(c)
+    if user != nil {
+        data["User"] = user
+        if rep, err := db.GetUserReputation(c.Request.Context(), user.ID); err == nil {
+            data["Karma"] = rep
+        }
+    }
+    if settings, err := db.GetForumSettings(c.Request.Context()); err == nil {
+        data["ForumName"] = settings.ForumName
+    }
+    return data
+}
+```
+
+**Usage:**
+```go
+func MyHandler(c *gin.Context) {
+    data := baseData(c)  // Gets User, Karma, ForumName, Version
+    data["Posts"] = posts
+    c.HTML(200, "my_page.html", data)
+}
+```
+
+### Keep Templates Simple
+
+- Logic belongs in Go, not templates
+- Use helper functions for complex rendering
+- Avoid deep nesting
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/development/authentication">
+    Learn about sessions and security
+  </Card>
+  <Card title="Architecture" icon="diagram-project" href="/development/architecture">
+    Understand the request flow
+  </Card>
+</CardGroup>

@@ -1,0 +1,189 @@
+---
+title: version
+description: Check the installed oForum version
+---
+
+The `version` command displays the currently installed oForum version.
+
+## Usage
+
+```bash
+oforum version
+```
+
+Aliases:
+```bash
+oforum --version
+oforum -v
+```
+
+## Output
+
+```bash
+oforum version
+```
+
+Output:
+```
+oforum v0.0.2
+Run 'oforum update' to check for updates
+```
+
+The version format is:
+```
+v{major}.{minor}.{patch}
+```
+
+## Version Format
+
+oForum follows [Semantic Versioning](https://semver.org/):
+
+<ParamField path="Major" type="number">
+  Breaking changes. Upgrading may require schema changes or configuration updates.
+  
+  Example: `v1.0.0` → `v2.0.0`
+</ParamField>
+
+<ParamField path="Minor" type="number">
+  New features, backwards-compatible. Safe to upgrade.
+  
+  Example: `v0.1.0` → `v0.2.0`
+</ParamField>
+
+<ParamField path="Patch" type="number">
+  Bug fixes and small improvements. Always safe to upgrade.
+  
+  Example: `v0.0.1` → `v0.0.2`
+</ParamField>
+
+## Checking for Updates
+
+The version command reminds you to check for updates:
+
+```
+Run 'oforum update' to check for updates
+```
+
+To update to the latest release:
+
+```bash
+oforum update
+```
+
+See [update](/cli/update) for details.
+
+## Build Information
+
+The version is embedded at compile time from the source constant:
+
+```go main.go:27
+const Version = "0.0.2"
+```
+
+When building from source, the version in your binary matches the source code version.
+
+## Examples
+
+### Quick Version Check
+
+```bash
+oforum -v
+```
+
+Output:
+```
+oforum v0.0.2
+Run 'oforum update' to check for updates
+```
+
+### Version in Scripts
+
+Extract just the version number:
+
+```bash
+oforum version | head -n 1 | cut -d' ' -f2
+```
+
+Output:
+```
+v0.0.2
+```
+
+### Check Before Updating
+
+```bash
+echo "Current: $(oforum version | head -n 1)"
+oforum update
+echo "Updated: $(oforum version | head -n 1)"
+```
+
+## Release Notes
+
+For detailed information about each version, see the GitHub releases page:
+
+https://github.com/arcten/oforum/releases
+
+Each release includes:
+- New features
+- Bug fixes
+- Breaking changes (if any)
+- Migration notes
+- Download links
+
+## Comparing Versions
+
+### Check if Update Needed
+
+Compare your installed version with the latest release:
+
+```bash
+INSTALLED=$(oforum version | head -n 1 | cut -d' ' -f2)
+LATEST=$(curl -s https://api.github.com/repos/arcten/oforum/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+
+if [ "$INSTALLED" != "$LATEST" ]; then
+  echo "Update available: $INSTALLED → $LATEST"
+  echo "Run: oforum update"
+else
+  echo "Already on latest version: $INSTALLED"
+fi
+```
+
+### Verify Installation
+
+Confirm oForum is installed correctly:
+
+```bash
+which oforum
+oforum version
+```
+
+Output:
+```
+/usr/local/bin/oforum
+oforum v0.0.2
+Run 'oforum update' to check for updates
+```
+
+## Version History
+
+<Accordion title="Version 0.0.2 (Latest)">
+  Current stable release with core forum features:
+  - User authentication and profiles
+  - Post creation and commenting
+  - Upvote system
+  - Admin dashboard
+  - Role-based permissions
+  - Tag system
+</Accordion>
+
+<Accordion title="Version 0.0.1">
+  Initial release with basic forum functionality:
+  - User accounts
+  - Posts and comments
+  - Simple upvoting
+  - Basic admin features
+</Accordion>
+
+<Note>
+  Check the [GitHub releases page](https://github.com/arcten/oforum/releases) for the complete version history and detailed changelogs.
+</Note>

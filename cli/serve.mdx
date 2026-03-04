@@ -1,0 +1,207 @@
+---
+title: serve
+description: Start the oForum web server
+---
+
+The `serve` command starts the oForum web server. This is the default command—running `oforum` without arguments is equivalent to `oforum serve`.
+
+## Usage
+
+```bash
+oforum serve
+# or simply
+oforum
+```
+
+## Startup Sequence
+
+When you start the server, oForum performs the following operations:
+
+1. **Load environment** - Reads `.env` file if present
+2. **Validate configuration** - Checks for required `DATABASE_URL`
+3. **Run migrations** - Automatically applies pending database migrations
+4. **Connect to database** - Establishes PostgreSQL connection
+5. **Start web server** - Begins listening for HTTP requests
+
+<Note>
+  Migrations run automatically on startup. You don't need to run `oforum migrate` separately unless you want to apply migrations without starting the server.
+</Note>
+
+## Environment Variables
+
+<ParamField path="DATABASE_URL" type="string" required>
+  PostgreSQL connection string.
+  
+  ```bash
+  DATABASE_URL=postgres://localhost:5432/oforum?sslmode=disable
+  ```
+  
+  If `DATABASE_URL` is not set, the server will exit with an error message:
+  ```
+  ✗ DATABASE_URL is required
+  
+  Set it in .env or as an environment variable.
+  Run oforum init to generate a .env file.
+  ```
+</ParamField>
+
+<ParamField path="PORT" type="string" default="8080">
+  Port number for the HTTP server.
+  
+  ```bash
+  PORT=3000
+  ```
+</ParamField>
+
+## Examples
+
+### Start with Default Port (8080)
+
+```bash
+oforum
+```
+
+Output:
+```
+Migrations applied successfully
+Starting server on :8080
+```
+
+### Start on Custom Port
+
+```bash
+PORT=3000 oforum serve
+```
+
+### Start with Inline Database URL
+
+```bash
+DATABASE_URL="postgres://user:pass@db.example.com:5432/oforum" oforum
+```
+
+### Production Deployment
+
+Create a systemd service file:
+
+```ini /etc/systemd/system/oforum.service
+[Unit]
+Description=oForum
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=oforum
+WorkingDirectory=/opt/oforum
+EnvironmentFile=/opt/oforum/.env
+ExecStart=/usr/local/bin/oforum serve
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+
+```bash
+sudo systemctl enable oforum
+sudo systemctl start oforum
+```
+
+## Stopping the Server
+
+### Graceful Shutdown
+
+Press `Ctrl+C` to send SIGINT. The server will:
+- Stop accepting new connections
+- Close the database connection
+- Exit cleanly
+
+### Force Quit
+
+Press `Ctrl+C` twice or send SIGKILL:
+
+```bash
+kill -9 <pid>
+```
+
+<Warning>
+  Force killing may leave database connections open. Use graceful shutdown when possible.
+</Warning>
+
+## Server Features
+
+The server starts with:
+
+- **Gzip compression** - Automatic response compression
+- **HTML minification** - Reduced page sizes
+- **Session management** - Cookie-based authentication
+- **Ban checking** - Automatic banned user filtering
+- **Template rendering** - Go templates with custom functions
+- **Static routes** - Homepage, posts, user profiles, admin panel
+- **SEO routes** - `robots.txt`, `sitemap.xml`, `llms.txt`
+
+## Troubleshooting
+
+### Port Already in Use
+
+Error:
+```
+Failed to start server: listen tcp :8080: bind: address already in use
+```
+
+Solution: Use a different port or stop the conflicting service:
+
+```bash
+# Find process using port 8080
+lsof -i :8080
+
+# Start on different port
+PORT=8081 oforum
+```
+
+### Database Connection Failed
+
+Error:
+```
+Failed to connect to database: connection refused
+```
+
+Solution: Verify PostgreSQL is running and `DATABASE_URL` is correct:
+
+```bash
+# Test connection
+psql "$DATABASE_URL"
+
+# Check PostgreSQL status
+sudo systemctl status postgresql
+```
+
+### Migration Failed
+
+Error:
+```
+Migration failed: <error message>
+```
+
+Solution: Run migrations manually to see detailed error:
+
+```bash
+oforum migrate
+```
+
+See [migrate](/cli/migrate) for troubleshooting migration issues.
+
+## Logs
+
+The server logs to stdout. In production, redirect to a log file:
+
+```bash
+oforum serve >> /var/log/oforum/server.log 2>&1
+```
+
+Or use systemd journal:
+
+```bash
+journalctl -u oforum -f
+```

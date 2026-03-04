@@ -1,0 +1,137 @@
+---
+title: Posts
+description: Learn how to create, upvote, and manage posts in oForum
+---
+
+Posts are the foundation of discussions in oForum. Each post can include a title, optional text body, and an optional URL for sharing links.
+
+## Creating a New Post
+
+<Steps>
+  <Step title="Navigate to Submit">
+    Click the "submit" link in the navigation bar to access the post creation page.
+  </Step>
+  
+  <Step title="Fill in Post Details">
+    - **Title** (required): Give your post a clear, descriptive title
+    - **URL** (optional): Add a link if you're sharing an external resource
+    - **Text** (optional): Add additional context, discussion points, or description
+  </Step>
+  
+  <Step title="Add Tags">
+    Select up to the configured maximum number of tags to categorize your post. Tags help others discover your content.
+  </Step>
+  
+  <Step title="Submit">
+    Click the submit button or press `Cmd/Ctrl + Enter` to publish your post.
+  </Step>
+</Steps>
+
+<Tip>
+  You can format links in your post body using the syntax `<https://example.com>`. This will automatically convert to a clickable link.
+</Tip>
+
+## Link Formatting
+
+When writing post text or comments, you can create clickable links using angle brackets:
+
+```
+Check out this resource: <https://example.com>
+```
+
+This simple syntax makes it easy to share URLs without complex markdown formatting.
+
+## Upvoting Posts
+
+Upvoting helps surface quality content to the top of the forum.
+
+<Steps>
+  <Step title="Find the Upvote Button">
+    Look for the triangle arrow next to each post's point count.
+  </Step>
+  
+  <Step title="Click to Upvote">
+    Click the arrow to upvote. The arrow will be highlighted to show you've upvoted.
+  </Step>
+  
+  <Step title="Toggle Your Vote">
+    Click again to remove your upvote if you change your mind.
+  </Step>
+</Steps>
+
+<Note>
+  You must be logged in to upvote posts. Each user can upvote a post only once.
+</Note>
+
+## Post Ranking: Top vs New
+
+oForum offers two ways to view posts:
+
+### Top Posts (Default)
+
+The home page displays posts ranked by a combination of:
+- **Points**: Number of upvotes received
+- **Age**: How recently the post was created
+
+The ranking algorithm uses the formula: `points / (age_in_hours + 2)^1.5`
+
+This means newer posts with upvotes rise quickly, but older posts need more upvotes to stay visible. It ensures fresh, quality content surfaces while preventing old posts from dominating forever.
+
+### New Posts
+
+Click "new" in the navigation to see posts sorted by creation time, with the most recent first. This view helps you:
+- Discover brand new discussions
+- See all content regardless of upvotes
+- Engage with posts before they gain traction
+
+## Editing and Deleting Posts
+
+### Deleting Your Own Posts
+
+You can delete posts you've created:
+
+<Steps>
+  <Step title="Open Your Post">
+    Navigate to the post you want to delete.
+  </Step>
+  
+  <Step title="Click Delete">
+    Find the "delete" link next to your username in the post metadata.
+  </Step>
+  
+  <Step title="Confirm">
+    Confirm the deletion when prompted.
+  </Step>
+</Steps>
+
+<Warning>
+  Deletion is permanent and cannot be undone. All associated comments will also be removed.
+</Warning>
+
+<Note>
+  oForum currently doesn't support editing posts after creation. Consider carefully before submitting. If you need to correct information, you can delete and repost or clarify in the comments.
+</Note>
+
+## Tags
+
+Tags help organize and filter content:
+
+- **Browsing by Tag**: Click any tag on a post to see all posts with that tag
+- **Filtering**: Use tags to find specific topics of interest
+- **Tag Limits**: Administrators configure the maximum number of tags per post
+- **Tag Management**: Available tags are set by forum administrators
+
+<Tip>
+  When creating a post, choose the most relevant tags to help your audience find your content. More tags isn't always better—focus on accuracy.
+</Tip>
+
+## Post URLs and Slugs
+
+Each post automatically gets a human-readable URL based on its title:
+
+- Format: `/post/your-post-title`
+- Automatically generated from your title
+- Special characters are removed or converted to hyphens
+- Duplicate titles get numbered suffixes (e.g., `-2`, `-3`)
+
+Posts can be accessed both by their slug and numeric ID, but the canonical URL uses the slug for better SEO.

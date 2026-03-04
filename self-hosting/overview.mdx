@@ -1,0 +1,103 @@
+---
+title: Self-hosting overview
+description: Learn about the different ways to self-host oForum and choose the best deployment method for your needs
+---
+
+oForum is designed to be minimal and easy to self-host. You need just two components: the oForum binary and a PostgreSQL database. That's it.
+
+## Why self-host?
+
+Self-hosting gives you complete control over your forum:
+
+- **Data ownership**: Your data stays on your infrastructure
+- **Customization**: Modify the source code to fit your needs
+- **Privacy**: No third-party tracking or data collection
+- **Cost control**: Scale based on your actual usage
+
+## Requirements
+
+To run oForum, you need:
+
+1. **oForum binary**: Single executable with no external dependencies
+2. **PostgreSQL database**: Version 12 or higher recommended
+
+That's all. No JavaScript runtime, no complex dependencies, no configuration files.
+
+```bash
+DATABASE_URL="postgres://user:pass@host:5432/oforum" oforum
+```
+
+Migrations run automatically on startup, so there's no separate setup step.
+
+## Deployment options
+
+Choose the deployment method that best fits your infrastructure:
+
+<CardGroup cols={3}>
+  <Card title="Docker" icon="docker" href="/self-hosting/docker">
+    Containerized deployment with Docker or Docker Compose
+  </Card>
+  <Card title="Fly.io" icon="plane" href="/self-hosting/fly-io">
+    One-command deployment to Fly.io's global network
+  </Card>
+  <Card title="Manual" icon="server" href="/self-hosting/manual">
+    Direct binary installation on Linux or macOS servers
+  </Card>
+</CardGroup>
+
+### Comparison
+
+| Method | Best for | Complexity | Scalability |
+|--------|----------|------------|--------------|
+| **Docker** | Development, testing, simple deploys | Low | Medium |
+| **Fly.io** | Production, global distribution | Very low | High |
+| **Manual** | Full control, existing infrastructure | Medium | Depends on setup |
+
+## Security considerations
+
+Before deploying oForum to production:
+
+<Warning>
+  Always use SSL/TLS in production. Never expose your forum over plain HTTP.
+</Warning>
+
+### Essential security practices
+
+<Steps>
+  <Step title="Use SSL/TLS">
+    Configure HTTPS through a reverse proxy (nginx, Caddy) or your platform's SSL termination (Fly.io, AWS, etc.)
+  </Step>
+  
+  <Step title="Secure your database">
+    - Use strong PostgreSQL passwords
+    - Restrict database access to your application only
+    - Enable SSL connections with `sslmode=require` in production
+  </Step>
+  
+  <Step title="Keep backups">
+    Regularly backup your PostgreSQL database. Your forum data is only as safe as your backup strategy.
+  </Step>
+  
+  <Step title="Update regularly">
+    Run `oforum update` periodically to get security patches and new features.
+  </Step>
+</Steps>
+
+### Environment security
+
+- **Never commit** `.env` files or expose `DATABASE_URL` in logs
+- Use environment variables or secrets management for sensitive data
+- Restrict file permissions: `chmod 600 .env`
+
+<Note>
+  oForum doesn't collect any telemetry or phone home. Your deployment is completely private.
+</Note>
+
+## What's next?
+
+Choose your deployment method and follow the detailed guide:
+
+- [Docker deployment](/self-hosting/docker) - Quick setup with containers
+- [Fly.io deployment](/self-hosting/fly-io) - Managed platform deployment
+- [Manual deployment](/self-hosting/manual) - Traditional server setup
+- [Environment variables](/self-hosting/environment) - Configuration reference

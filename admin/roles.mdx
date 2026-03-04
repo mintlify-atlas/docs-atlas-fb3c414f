@@ -1,0 +1,259 @@
+---
+title: 'Role Management'
+description: 'Create custom roles, configure role properties, and manage role hierarchy'
+---
+
+Roles provide visual distinction and optional administrative privileges to users. Create custom roles to recognize contributors, organize moderators, and establish community hierarchy.
+
+## Creating Custom Roles
+
+Create roles to distinguish user groups with custom names and colors.
+
+<Steps>
+  <Step title="Navigate to roles">
+    Access the role management interface at `/admin/roles`.
+  </Step>
+  
+  <Step title="Fill role details">
+    Enter the following information:
+    
+    - **Name**: Role identifier (e.g., "Moderator", "Contributor", "VIP")
+    - **Color**: Hex color code for role badge (e.g., `#3b82f6` for blue)
+    - **Sort order**: Numeric priority for display ordering
+    - **Admin rank**: Whether this role grants admin privileges
+  </Step>
+  
+  <Step title="Create role">
+    Click the create button. The role becomes immediately available for assignment.
+  </Step>
+</Steps>
+
+## Role Properties
+
+Each role has four configurable properties that control its behavior and appearance:
+
+<ParamField path="name" type="string" required>
+  The role's display name, shown as a badge next to usernames. Choose clear, concise names that convey the role's purpose.
+  
+  Examples: "Admin", "Moderator", "Contributor", "Member", "VIP"
+</ParamField>
+
+<ParamField path="color" type="string" required>
+  Hex color code determining the role badge color. This provides visual distinction in the user interface.
+  
+  Format: `#RRGGBB`
+  
+  Common colors:
+  - `#ef4444` - Red (admin/owner)
+  - `#3b82f6` - Blue (moderator)
+  - `#10b981` - Green (contributor)
+  - `#8b5cf6` - Purple (VIP)
+  - `#6b7280` - Gray (default/member)
+</ParamField>
+
+<ParamField path="sort_order" type="integer" default="0">
+  Numeric value determining display priority. Lower numbers appear first when multiple roles are assigned.
+  
+  Recommended hierarchy:
+  - `0-10`: Admin/owner roles (highest priority)
+  - `11-50`: Moderator roles
+  - `51-100`: Special recognition roles
+  - `101+`: General member roles
+</ParamField>
+
+<ParamField path="is_admin_rank" type="boolean" default="false">
+  Whether this role grants administrative privileges. Users with admin-ranked roles can:
+  
+  - Access the admin panel
+  - Manage users, roles, tags, and settings
+  - Ban and unban users
+  - Assign and remove roles
+  
+  <Warning>
+    Only assign admin rank to trusted users. This grants complete forum control equivalent to the `is_admin` flag.
+  </Warning>
+</ParamField>
+
+## Role Badges on Usernames
+
+Roles appear as colored badges next to usernames throughout the forum:
+
+- **Post listings**: Role badges display next to post authors
+- **Comment threads**: Badges appear on all comments
+- **User profiles**: All assigned roles display on profile pages
+- **Admin panel**: Role badges show in user lists
+
+### Display Order
+
+When users have multiple roles, badges display in order of `sort_order` (ascending), then alphabetically by name:
+
+```
+User with roles: Moderator (order: 20), Member (order: 100), VIP (order: 50)
+Displays as: [Moderator] [VIP] [Member]
+```
+
+### Badge Styling
+
+Role badges use the configured color with automatic contrast adjustment for readability:
+
+```html
+<span style="background-color: #3b82f6; color: white;">
+  Moderator
+</span>
+```
+
+## Assigning Roles to Users
+
+Assign roles from either the user management interface or individual user pages:
+
+<Steps>
+  <Step title="Access user management">
+    Navigate to `/admin/users` to view all users.
+  </Step>
+  
+  <Step title="Select role">
+    Find the user and select the desired role from the dropdown menu.
+  </Step>
+  
+  <Step title="Assign role">
+    Click the assign button. The role badge appears immediately.
+  </Step>
+</Steps>
+
+<Note>
+  Users can have multiple roles simultaneously. There is no limit to the number of roles per user.
+</Note>
+
+## Managing Role Hierarchy
+
+Organize roles by priority to create clear visual hierarchy:
+
+### Recommended Structure
+
+1. **Owner** (order: 0, admin rank: true, color: #ef4444)
+   - Highest authority, protected role
+   - Cannot be deleted or have admin rank removed
+
+2. **Administrator** (order: 10, admin rank: true, color: #f97316)
+   - Full administrative access
+   - Trusted moderators
+
+3. **Moderator** (order: 20, admin rank: true/false, color: #3b82f6)
+   - Content moderation
+   - Optional admin access
+
+4. **Contributor** (order: 50, admin rank: false, color: #10b981)
+   - Recognized active members
+   - No admin privileges
+
+5. **Member** (order: 100, admin rank: false, color: #6b7280)
+   - Standard users
+   - Default role
+
+### The Owner Role
+
+The "owner" role has special protections:
+
+<Warning>
+  - Cannot be deleted
+  - Cannot have name changed from "owner"
+  - Cannot have `is_admin_rank` disabled
+  - Cannot be removed from users if only one owner exists
+  
+  These protections prevent accidental lockout from admin access.
+</Warning>
+
+## Editing Roles
+
+Modify existing roles to update their appearance or properties:
+
+<Steps>
+  <Step title="Locate role">
+    Find the role in the roles list at `/admin/roles`.
+  </Step>
+  
+  <Step title="Update properties">
+    Modify any of the four role properties:
+    - Name
+    - Color
+    - Sort order
+    - Admin rank status
+  </Step>
+  
+  <Step title="Save changes">
+    Click the update button. Changes apply immediately to all users with this role.
+  </Step>
+</Steps>
+
+<Note>
+  Editing a role affects all users who have it assigned. Role badge colors and names update everywhere in the forum.
+</Note>
+
+## Deleting Roles
+
+Remove roles that are no longer needed:
+
+<Steps>
+  <Step title="Select role">
+    Find the role you want to delete in the roles list.
+  </Step>
+  
+  <Step title="Click delete">
+    Click the delete button next to the role.
+  </Step>
+  
+  <Step title="Confirm deletion">
+    The role is removed from all users and deleted from the system.
+  </Step>
+</Steps>
+
+<Warning>
+  Deleting a role:
+  - Removes it from all users immediately
+  - Cannot be undone
+  - Does not affect user accounts (only removes the role badge)
+  - Cannot delete the protected "owner" role
+</Warning>
+
+## Best Practices
+
+Follow these guidelines for effective role management:
+
+### Naming Conventions
+
+- Use clear, descriptive names
+- Keep names short (1-2 words)
+- Avoid special characters or emojis
+- Use title case ("Moderator" not "moderator")
+
+### Color Selection
+
+- Use distinct colors for different role tiers
+- Reserve red/orange for admin roles
+- Use cooler colors (blue, green, purple) for non-admin roles
+- Ensure sufficient contrast for readability
+- Test colors against both light and dark backgrounds
+
+### Sort Order Strategy
+
+- Use gaps between values (0, 10, 20) to allow insertion
+- Group related roles in ranges
+- Keep admin roles in 0-10 range
+- Leave room for future additions
+
+### Admin Rank Usage
+
+<Warning>
+  Only enable `is_admin_rank` for roles that require full administrative access. Consider creating separate moderator roles without admin rank for limited-trust users.
+</Warning>
+
+### Role Proliferation
+
+- Limit the number of active roles (5-10 recommended)
+- Too many roles create visual clutter
+- Consolidate similar roles
+- Remove unused or outdated roles
+
+<Note>
+  Effective role systems are simple and intuitive. Users should immediately understand role hierarchy by color and name.
+</Note>

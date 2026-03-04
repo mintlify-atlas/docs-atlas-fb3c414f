@@ -1,0 +1,574 @@
+---
+title: Authentication
+description: Understand oForum's authentication system, sessions, and security
+---
+
+## Overview
+
+oForum uses **session-based authentication** with database-stored tokens and bcrypt password hashing. No JWTs, no third-party auth — just secure, simple sessions.
+
+<CardGroup cols={2}>
+  <Card title="Password Hashing" icon="key">
+    bcrypt with default cost for secure password storage
+  </Card>
+  <Card title="Session Tokens" icon="ticket">
+    Cryptographically random tokens stored in database
+  </Card>
+  <Card title="HttpOnly Cookies" icon="cookie">
+    Prevents JavaScript access to session tokens
+  </Card>
+  <Card title="Role-Based Access" icon="shield">
+    Admin permissions derived from roles table
+  </Card>
+</CardGroup>
+
+## Password Hashing
+
+oForum uses **bcrypt** for password hashing:
+
+```go internal/auth/auth.go:12-20
+func HashPassword(password string) (string, error) {
+    bytes, err := bcrypt.GenerateFromPassword(
+        []byte(password), 
+        bcrypt.DefaultCost,
+    )
+    return string(bytes), err
+}
+
+func CheckPassword(hash, password string) bool {
+    err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+    return err == nil
+}
+```
+
+<Note>
+bcrypt is intentionally **slow** (adaptive hashing). This protects against brute-force attacks even if the database is compromised.
+</Note>
+
+### Signup Flow
+
+```go internal/auth/auth.go:22-39
+func Signup(ctx context.Context, username, password string) (*models.User, *models.Session, error) {
+    // Hash password
+    hash, err := HashPassword(password)
+    if err != nil {
+        return nil, nil, err
+    }
+    
+    // Create user
+    user, err := db.CreateUser(ctx, username, hash)
+    if err != nil {
+        return nil, nil, err
+    }
+    
+    // Create session
+    session, err := db.CreateSession(ctx, user.ID)
+    if err != nil {
+        return nil, nil, err
+    }
+    
+    return user, session, nil
+}
+```
+
+<Steps>
+  <Step title="Hash Password">
+    User's password is hashed with bcrypt (never stored in plaintext)
+  </Step>
+  <Step title="Create User Record">
+    User inserted into `users` table with hashed password
+  </Step>
+  <Step title="Generate Session">
+    Random session token created and stored in `sessions` table
+  </Step>
+  <Step title="Set Cookie">
+    Session token set as HttpOnly cookie in the response
+  </Step>
+</Steps>
+
+### Login Flow
+
+```go internal/auth/auth.go:41-57
+func Login(ctx context.Context, username, password string) (*models.User, *models.Session, error) {
+    // Get user by username
+    user, err := db.GetUserByUsername(ctx, username)
+    if err != nil {
+        return nil, nil, err
+    }
+    
+    // Check password
+    if !CheckPassword(user.PasswordHash, password) {
+        return nil, nil, fmt.Errorf("invalid password")
+    }
+    
+    // Create session
+    session, err := db.CreateSession(ctx, user.ID)
+    if err != nil {
+        return nil, nil, err
+    }
+    
+    return user, session, nil
+}
+```
+
+## Session Management
+
+Sessions are stored in the **database**, not in memory or Redis:
+
+```go internal/models/models.go:54-59
+type Session struct {
+    Token     string    `json:"token"`
+    UserID    int       `json:"user_id"`
+    ExpiresAt time.Time `json:"expires_at"`
+    CreatedAt time.Time `json:"created_at"`
+}
+```
+
+### Creating Sessions
+
+```go internal/db/sessions.go:11-28
+func CreateSession(ctx context.Context, userID int) (*models.Session, error) {
+    token, err := generateToken()
+    if err != nil {
+        return nil, err
+    }
+    expiresAt := time.Now().Add(7 * 24 * time.Hour) // 7 days
+    
+    session := &models.Session{}
+    err = Pool.QueryRow(ctx,
+        `INSERT INTO sessions (token, user_id, expires_at) VALUES ($1, $2, $3)
+         RETURNING token, user_id, expires_at, created_at`,
+        token, userID, expiresAt,
+    ).Scan(&session.Token, &session.UserID, &session.ExpiresAt, &session.CreatedAt)
+    
+    return session, err
+}
+```
+
+**Token generation:**
+```go internal/db/sessions.go:48-55
+func generateToken() (string, error) {
+    bytes := make([]byte, 32)
+    _, err := rand.Read(bytes)
+    if err != nil {
+        return "", err
+    }
+    return hex.EncodeToString(bytes), nil  // 64-char hex string
+}
+```
+
+<Note>
+Tokens are **64 characters** of cryptographically random hex. This provides 256 bits of entropy, making brute-force attacks infeasible.
+</Note>
+
+### Validating Sessions
+
+```go internal/db/sessions.go:30-41
+func GetSession(ctx context.Context, token string) (*models.Session, error) {
+    session := &models.Session{}
+    err := Pool.QueryRow(ctx,
+        `SELECT token, user_id, expires_at, created_at FROM sessions
+         WHERE token = $1 AND expires_at > NOW()`,
+        token,
+    ).Scan(&session.Token, &session.UserID, &session.ExpiresAt, &session.CreatedAt)
+    if err != nil {
+        return nil, err
+    }
+    return session, nil
+}
+```
+
+**Expired sessions** are automatically excluded by the `expires_at > NOW()` condition.
+
+### Deleting Sessions (Logout)
+
+```go internal/db/sessions.go:43-46
+func DeleteSession(ctx context.Context, token string) error {
+    _, err := Pool.Exec(ctx, `DELETE FROM sessions WHERE token = $1`, token)
+    return err
+}
+```
+
+## Middleware
+
+Authentication middleware runs on every request:
+
+### LoadUser Middleware
+
+Attempts to load the user from the session cookie (non-blocking):
+
+```go internal/auth/middleware.go:15-49
+func LoadUser() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        token, err := c.Cookie(SessionCookieName)
+        if err != nil || token == "" {
+            c.Next()
+            return
+        }
+        
+        session, err := db.GetSession(c.Request.Context(), token)
+        if err != nil {
+            c.Next()
+            return
+        }
+        
+        user, err := db.GetUserByID(c.Request.Context(), session.UserID)
+        if err != nil {
+            c.Next()
+            return
+        }
+        
+        // Load roles and derive admin status
+        roles, _ := db.GetUserRoles(c.Request.Context(), user.ID)
+        user.Roles = roles
+        user.IsAdmin = false
+        for _, r := range roles {
+            if r.IsAdminRank {
+                user.IsAdmin = true
+                break
+            }
+        }
+        
+        c.Set("user", user)
+        c.Next()
+    }
+}
+```
+
+**Applied globally:**
+```go main.go:319
+r.Use(auth.LoadUser())
+```
+
+<Note>
+`LoadUser` doesn't block anonymous access — it just sets `"user"` in the context if authenticated.
+</Note>
+
+### CheckBan Middleware
+
+Blocks banned users from the entire site:
+
+```go internal/auth/middleware.go:53-82
+func CheckBan() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        user := GetCurrentUser(c)
+        if user == nil || !user.IsBanned() {
+            c.Next()
+            return
+        }
+        
+        // Allow logout so they can sign out
+        if c.Request.URL.Path == "/logout" && c.Request.Method == "POST" {
+            c.Next()
+            return
+        }
+        
+        isPermanent := user.BannedUntil != nil &&
+            user.BannedUntil.After(time.Now().Add(50*365*24*time.Hour))
+        
+        c.HTML(http.StatusForbidden, "banned.html", gin.H{
+            "BannedUntil": user.BannedUntil,
+            "IsPermanent": isPermanent,
+        })
+        c.Abort()
+    }
+}
+```
+
+**Applied globally after LoadUser:**
+```go main.go:320
+r.Use(auth.CheckBan())
+```
+
+### RequireAuth Middleware
+
+Redirects to login if not authenticated:
+
+```go internal/auth/middleware.go:85-93
+func RequireAuth() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        if _, exists := c.Get("user"); !exists {
+            c.Redirect(302, "/login")
+            c.Abort()
+            return
+        }
+        c.Next()
+    }
+}
+```
+
+**Usage:**
+```go main.go:347-360
+authorized := r.Group("/")
+authorized.Use(auth.RequireAuth())
+{
+    authorized.GET("/submit", handlers.SubmitPage)
+    authorized.POST("/submit", handlers.SubmitPost)
+    authorized.POST("/upvote/post/:id", handlers.UpvotePost)
+}
+```
+
+### RequireAdmin Middleware
+
+Redirects to home if not admin:
+
+```go internal/auth/middleware.go:117-127
+func RequireAdmin() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        user := GetCurrentUser(c)
+        if user == nil || !user.IsAdmin {
+            c.Redirect(302, "/")
+            c.Abort()
+            return
+        }
+        c.Next()
+    }
+}
+```
+
+**Usage:**
+```go main.go:363-382
+admin := r.Group("/admin")
+admin.Use(auth.RequireAuth(), auth.RequireAdmin())
+{
+    admin.GET("", handlers.AdminDashboard)
+    admin.GET("/users", handlers.AdminUsers)
+    admin.POST("/ban/:id", handlers.AdminBanUser)
+}
+```
+
+## Cookie Handling
+
+Session cookies are **HttpOnly** and set during login/signup:
+
+```go handlers/auth.go (simplified)
+func LoginSubmit(c *gin.Context) {
+    username := c.PostForm("username")
+    password := c.PostForm("password")
+    
+    user, session, err := auth.Login(c.Request.Context(), username, password)
+    if err != nil {
+        // ... error handling
+    }
+    
+    // Set session cookie
+    c.SetCookie(
+        auth.SessionCookieName,  // "session_token"
+        session.Token,
+        int(7*24*60*60),         // 7 days in seconds
+        "/",                     // Path
+        "",                      // Domain (empty = current)
+        false,                   // Secure (should be true in production)
+        true,                    // HttpOnly (prevents JS access)
+    )
+    
+    c.Redirect(302, "/")
+}
+```
+
+**Cookie name:**
+```go internal/auth/middleware.go:12
+const SessionCookieName = "session_token"
+```
+
+<Warning>
+In production, set `Secure: true` when using HTTPS to prevent cookie interception.
+</Warning>
+
+## Helper Functions
+
+### GetCurrentUser
+
+```go internal/auth/middleware.go:96-106
+func GetCurrentUser(c *gin.Context) *models.User {
+    val, exists := c.Get("user")
+    if !exists {
+        return nil
+    }
+    user, ok := val.(*models.User)
+    if !ok {
+        return nil
+    }
+    return user
+}
+```
+
+**Usage in handlers:**
+```go
+func MyHandler(c *gin.Context) {
+    user := auth.GetCurrentUser(c)
+    if user == nil {
+        // Anonymous user
+    } else {
+        // Logged in as user
+    }
+}
+```
+
+### GetCurrentUserID
+
+```go internal/auth/middleware.go:108-114
+func GetCurrentUserID(c *gin.Context) *int {
+    user := GetCurrentUser(c)
+    if user == nil {
+        return nil
+    }
+    return &user.ID
+}
+```
+
+**Useful for queries:**
+```go
+post, _ := db.GetPost(ctx, postID, auth.GetCurrentUserID(c))
+// Passes nil if anonymous, user ID if logged in
+```
+
+## Security Considerations
+
+### CSRF Protection
+
+<Warning>
+oForum currently **does not implement CSRF protection**. All state-changing operations should use POST with proper validation.
+</Warning>
+
+For production, consider:
+- CSRF tokens in forms
+- SameSite cookie attribute
+- Referrer checking
+
+### SQL Injection
+
+✅ **Protected** — all queries use parameterized statements:
+
+```go
+// Safe - uses $1 placeholder
+db.Pool.QueryRow(ctx, "SELECT * FROM users WHERE username = $1", username)
+
+// ❌ NEVER do this
+query := fmt.Sprintf("SELECT * FROM users WHERE username = '%s'", username)
+```
+
+### XSS Protection
+
+✅ **Protected** — Go's `html/template` auto-escapes all data:
+
+```html
+<!-- Automatic escaping -->
+<div>{{ .Post.Title }}</div>
+
+<!-- Manual escaping for trusted content -->
+<div>{{ formatContent .Post.Body }}</div>  <!-- Escapes first, then adds links -->
+```
+
+### Password Requirements
+
+<Note>
+oForum currently has **no password strength requirements**. Consider adding validation for production use.
+</Note>
+
+**Recommended additions:**
+```go
+func ValidatePassword(password string) error {
+    if len(password) < 8 {
+        return fmt.Errorf("password must be at least 8 characters")
+    }
+    // Add more checks (numbers, symbols, etc.)
+    return nil
+}
+```
+
+### Rate Limiting
+
+<Warning>
+No rate limiting is implemented. For production, add middleware to limit:
+- Login attempts per IP
+- Signup attempts per IP
+- Post/comment creation per user
+</Warning>
+
+## Role-Based Access Control
+
+Admin status is derived from the **roles** table:
+
+```go internal/models/models.go:23-30
+type Role struct {
+    ID          int       `json:"id"`
+    Name        string    `json:"name"`
+    Color       string    `json:"color"`
+    SortOrder   int       `json:"sort_order"`
+    IsAdminRank bool      `json:"is_admin_rank"`
+    CreatedAt   time.Time `json:"created_at"`
+}
+```
+
+**Determining admin status:**
+```go internal/auth/middleware.go:36-44
+roles, _ := db.GetUserRoles(c.Request.Context(), user.ID)
+user.Roles = roles
+user.IsAdmin = false
+for _, r := range roles {
+    if r.IsAdminRank {
+        user.IsAdmin = true
+        break
+    }
+}
+```
+
+This allows multiple admin roles with different names/colors, all granting admin access if `is_admin_rank = true`.
+
+## Testing Authentication
+
+### Manual Testing
+
+1. **Signup:**
+   ```bash
+   curl -X POST http://localhost:8080/signup \
+     -d "username=testuser" \
+     -d "password=testpass" \
+     -c cookies.txt
+   ```
+
+2. **Login:**
+   ```bash
+   curl -X POST http://localhost:8080/login \
+     -d "username=testuser" \
+     -d "password=testpass" \
+     -c cookies.txt
+   ```
+
+3. **Access Protected Route:**
+   ```bash
+   curl http://localhost:8080/submit -b cookies.txt
+   ```
+
+### Unit Testing
+
+```go
+func TestPasswordHashing(t *testing.T) {
+    password := "mysecretpassword"
+    
+    hash, err := auth.HashPassword(password)
+    if err != nil {
+        t.Fatal(err)
+    }
+    
+    if !auth.CheckPassword(hash, password) {
+        t.Error("Password check failed")
+    }
+    
+    if auth.CheckPassword(hash, "wrongpassword") {
+        t.Error("Wrong password accepted")
+    }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/development/architecture">
+    Understand how authentication fits into the request flow
+  </Card>
+  <Card title="Database" icon="database" href="/development/database">
+    Learn about session storage and user queries
+  </Card>
+</CardGroup>

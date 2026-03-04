@@ -1,0 +1,120 @@
+---
+title: Introduction
+description: Learn about oForum, a minimal, fast, self-hostable forum application inspired by Hacker News
+---
+
+## What is oForum?
+
+oForum is a minimal, fast, self-hostable forum application inspired by Hacker News. Built with simplicity in mind, it delivers all the features you need for a modern discussion platform without the bloat.
+
+<Note>
+  oForum compiles to a single binary and requires only PostgreSQL to run. No complex infrastructure, no JavaScript frameworks, no configuration hell.
+</Note>
+
+## Key features
+
+oForum provides a complete forum experience with:
+
+- **Core functionality** - Posts, comments, threaded replies, and upvoting
+- **User profiles** - Karma tracking, bios, display names, and leaderboard
+- **Admin panel** - User management, bans, roles, tags, and forum settings
+- **Colored roles** - Visual username badges based on user roles
+- **Full-text search** - Find posts and discussions quickly
+- **Dark mode** - Built-in theme switching
+- **SEO optimized** - Sitemap, robots.txt, and llms.txt support
+- **No JavaScript frameworks** - Pure server-rendered HTML for speed
+
+## Design principles
+
+oForum follows a strict philosophy that prioritizes simplicity and performance:
+
+<Accordion title="Single binary">
+  Everything compiles into one executable, including database migrations. Deploy by copying a single file.
+</Accordion>
+
+<Accordion title="Zero config">
+  One environment variable (`DATABASE_URL`), sensible defaults for everything else. No YAML files, no config directories.
+</Accordion>
+
+<Accordion title="Server-rendered">
+  HTML is generated on the server using Go templates. No client-side framework, no hydration, no bundle size concerns.
+</Accordion>
+
+<Accordion title="Plain SQL">
+  No ORM abstractions. Just pgx and handwritten queries that you can understand and optimize.
+</Accordion>
+
+<Accordion title="Minimal dependencies">
+  The entire dependency tree: Gin, pgx, bcrypt, golang-migrate. That's it.
+</Accordion>
+
+<Accordion title="Fast">
+  Pages render in milliseconds, the binary starts in under a second.
+</Accordion>
+
+## Architecture overview
+
+oForum's architecture is deliberately simple:
+
+```
+┌──────────────┐
+│   oForum     │  ← Single Go binary (server-rendered HTML)
+│   Binary     │
+└──────┬───────┘
+       │
+       ↓
+┌──────────────┐
+│  PostgreSQL  │  ← Your database
+│   Database   │
+└──────────────┘
+```
+
+The binary contains:
+- HTTP server (Gin framework)
+- HTML templates (embedded)
+- Database migrations (embedded)
+- All application logic
+
+<Tip>
+  Migrations run automatically on startup. You never need to run them manually unless you want to.
+</Tip>
+
+## Who should use oForum?
+
+oForum is perfect for:
+
+<CardGroup cols={2}>
+  <Card title="Small communities" icon="users">
+    Launch a discussion platform for your project, team, or community without managing complex infrastructure
+  </Card>
+  <Card title="Self-hosters" icon="server">
+    Run your own forum on a VPS, home server, or platform like Fly.io with minimal resource requirements
+  </Card>
+  <Card title="Developers" icon="code">
+    Study or extend a clean, readable codebase without layers of abstraction
+  </Card>
+  <Card title="Minimalists" icon="leaf">
+    Enjoy a fast, distraction-free forum without tracking, ads, or unnecessary features
+  </Card>
+</CardGroup>
+
+## System requirements
+
+To run oForum, you need:
+
+- **Go 1.25+** (if building from source)
+- **PostgreSQL** (any recent version)
+- **Linux or macOS** (amd64 or arm64)
+
+That's it. No Docker required, no reverse proxy required (though recommended for production).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get oForum running in 5 minutes
+  </Card>
+  <Card title="Installation" icon="download" href="/installation">
+    Detailed installation instructions for all platforms
+  </Card>
+</CardGroup>
